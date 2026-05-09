@@ -48,16 +48,49 @@ const CONFIG_DIR = process.env.ELECTRON_USERDATA ? join(process.env.ELECTRON_USE
 if (!existsSync(CONFIG_DIR)) {
   mkdirSync(CONFIG_DIR, { recursive: true });
 }
+function copyDirRecursive(src: string, dst: string): void {
+  if (!existsSync(dst)) mkdirSync(dst, { recursive: true });
+  const entries = readdirSync(src);
+  for (const entry of entries) {
+    const srcPath = join(src, entry);
+    const dstPath = join(dst, entry);
+    const stat = statSync(srcPath);
+    if (stat.isDirectory()) {
+      copyDirRecursive(srcPath, dstPath);
+    } else {
+      writeFileSync(dstPath, readFileSync(srcPath));
+    }
+  }
+}
+
+if (process.env.ELECTRON_USERDATA) {
+  console.log('[server] ELECTRON_USERDATA:', process.env.ELECTRON_USERDATA);
+  console.log('[server] TOR_DL_PROJECT:', TOR_DL_PROJECT);
+  console.log('[server] TOR_DL_DIR:', TOR_DL_DIR);
+}
+
 // In Electron mode, migrate config from the original tor-dl project dir
 if (process.env.ELECTRON_USERDATA && existsSync(TOR_DL_PROJECT)) {
   try {
+    const distSrc = join(TOR_DL_PROJECT, 'dist');
+    const distDst = join(TOR_DL_DIR, 'dist');
+    const distBinFile = join(TOR_DL_DIR, 'dist', 'bin', 'tor-dl.js');
+    if (existsSync(distSrc) && (!existsSync(distDst) || !existsSync(distBinFile))) {
+      console.log('[server] Copying dist folder to:', distDst);
+      copyDirRecursive(distSrc, distDst);
+    }
+    console.log('[server] TOR_DL_DIR/dist exists:', existsSync(join(TOR_DL_DIR, 'dist')));
+    console.log('[server] TOR_DL_DIR/dist/bin/tor-dl.js exists:', existsSync(distBinFile));
     for (const f of ['users.json', 'filters.json', 'sources.json', '.watchlist-cache.json', 'settings.json']) {
       const src = join(TOR_DL_PROJECT, f);
       if (existsSync(src) && !existsSync(join(TOR_DL_DIR, f))) {
+        console.log('[server] Migrating:', f);
         writeFileSync(join(TOR_DL_DIR, f), readFileSync(src));
       }
     }
-  } catch (_) {}
+  } catch (e) {
+    console.error('[server] Migration error:', e);
+  }
 }
 
 const CACHE_FILE = join(tmpdir(), 'tor-dl-cache.json');
@@ -84,13 +117,38 @@ function esc(v: string): string {
 function torExec(args: string): string {
   const binDir = existsSync(join(TOR_DL_DIR, 'dist', 'bin', 'tor-dl.js')) ? TOR_DL_DIR : TOR_DL_PROJECT;
   const cmd = `node "${join(binDir, 'dist', 'bin', 'tor-dl.js')}" ${args}`;
+  console.log('[torExec] binDir:', binDir);
+  console.log('[torExec] cwd:', TOR_DL_DIR);
+  console.log('[torExec] cmd:', cmd);
+  console.log('[torExec] USERS_FILE location:', join(TOR_DL_DIR, 'users.json'));
+  console.log('[torExec] USERS_FILE exists:', existsSync(join(TOR_DL_DIR, 'users.json')));
+  if (existsSync(join(TOR_DL_DIR, 'users.json'))) {
+    try {
+      const content = JSON.parse(readFileSync(join(TOR_DL_DIR, 'users.json'), 'utf-8'));
+      console.log('[torExec] users.json content:', JSON.stringify(content));
+    } catch (e) {
+      console.log('[torExec] Failed to read users.json:', e);
+    }
+  }
   try {
-    return execSync(cmd, {
-      cwd: TOR_DL_DIR, encoding: 'utf-8', timeout: 60000,
+    const output = execSync(cmd, {
+      cwd: TOR_DL_DIR,
+      env: {
+        ...process.env,
+        ELECTRON_USERDATA: process.env.ELECTRON_USERDATA || '',
+        TOR_DL_PATH: TOR_DL_PROJECT
+      },
+      encoding: 'utf-8', timeout: 60000,
       maxBuffer: 10 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe']
     });
+    console.log('[torExec] output:', output);
+    return output;
   } catch (e: any) {
-    if (e && e.stdout) return e.stdout;
+    console.log('[torExec] error:', e.message);
+    if (e && e.stdout) {
+      console.log('[torExec] error stdout:', e.stdout);
+      return e.stdout;
+    }
     if (e && e.message) return e.message;
     return '';
   }
@@ -228,7 +286,8 @@ app.get('/api/user', (_req, res) => {
 app.post('/api/user', (req, res) => {
   try {
     const { username } = req.body;
-    writeFileSync(USERS_FILE, JSON.stringify({ letterboxd: { username } }, null, 2));
+    const data = { letterboxd: { username } };
+    writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
     try { torExec(`setuser "${username}"`); } catch (_) {}
     res.json({ ok: true });
   } catch (e: any) {

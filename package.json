@@ -19,6 +19,23 @@
     "directories": {
       "output": "dist"
     },
+    "extraResources": [
+      {
+        "from": "../tor-dl/dist",
+        "to": "tor-dl/dist",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../tor-dl/node_modules",
+        "to": "tor-dl/node_modules",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../tor-dl",
+        "to": "tor-dl",
+        "filter": ["*.json", "sources.json"]
+      }
+    ],
     "asar": false,
     "forceCodeSigning": false,
     "win": {
