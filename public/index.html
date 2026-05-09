@@ -241,8 +241,8 @@ body {
 .results-list { max-height: 500px; overflow-y: auto; }
 .result-item {
   display: grid;
-  grid-template-columns: 1fr auto auto auto auto;
-  gap: 10px; align-items: center;
+  grid-template-columns: 1fr auto auto auto auto auto;
+  gap: 6px; align-items: center;
   padding: 10px 14px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -265,7 +265,11 @@ body {
   border-radius: 4px; background: var(--bg3);
   color: var(--text2); min-width: 60px; text-align: center;
 }
-.result-item .r-action { color: var(--primary); font-size: 14px; }
+.result-item .r-actions { display:flex; gap:2px; align-items:center; }
+.result-item .r-actions button { background:none; border:none; cursor:pointer; font-size:13px; padding:4px 6px; border-radius:4px; color:var(--text2); transition:all 0.15s; }
+.result-item .r-actions button:hover { background:var(--bg3); color:var(--primary); }
+.result-item .r-actions .btn-dl { color:var(--primary); }
+.result-item .r-actions .btn-dl:hover { background:var(--primary); color:#fff; }
 
 /* Downloads Panel */
 .downloads-panel {
@@ -302,6 +306,7 @@ body {
 .d-status.downloading { background: #1a3d2e; color: var(--green); }
 .d-status.completed { background: #1a3d2e; color: var(--green); }
 .d-status.error { background: #3d1a1a; color: var(--red); }
+.d-status.stalled { background: #3d2e1a; color: var(--yellow); }
 .download-item .d-progress {
   height: 4px; background: var(--border); border-radius: 2px; overflow: hidden;
   margin-bottom: 4px;
@@ -475,6 +480,7 @@ body {
   .search-row { flex-direction: column; }
   .custom-select { min-width: 100%; }
   .result-item { grid-template-columns: 1fr auto; font-size: 12px; }
+  .result-item .r-actions { flex-direction:column; gap:2px; }
   .source-grid { grid-template-columns: 1fr; }
   .filter-grid { grid-template-columns: 1fr; }
   .modal { padding: 20px; }
@@ -620,6 +626,14 @@ body {
           <label>Limit</label>
           <input type="number" id="limit" placeholder="70">
         </div>
+        <div class="filter-field">
+          <label>Search Quality</label>
+          <input type="text" id="qualityFilter" placeholder="e.g. 1080p, 720p, 2160p">
+        </div>
+        <div class="filter-field" style="grid-column: span 2">
+          <label>Append to Search Query</label>
+          <input type="text" id="searchAppend" placeholder="e.g. BluRay WEB-DL x265">
+        </div>
       </div>
     </div>
 
@@ -665,7 +679,9 @@ async function api(url, opts = {}) {
       headers: { 'Content-Type': 'application/json' },
       ...opts
     });
-    return await res.json();
+    const text = await res.text();
+    if (!text) return null;
+    return JSON.parse(text);
   } catch (e) {
     showToast(e.message, 'error');
     return null;
@@ -759,6 +775,8 @@ async function loadFilters() {
   $('order').value = data.order || 'desc';
   $('category').value = data.category || 'all';
   $('limit').value = data.limit || 70;
+  $('qualityFilter').value = data.qualityFilter || '';
+  $('searchAppend').value = data.searchAppend || '';
 }
 
 $('saveSettings').addEventListener('click', async () => {
@@ -780,7 +798,9 @@ $('saveSettings').addEventListener('click', async () => {
     sortBy: $('sortBy').value,
     order: $('order').value,
     category: $('category').value,
-    limit: parseInt($('limit').value) || 70
+    limit: parseInt($('limit').value) || 70,
+    qualityFilter: $('qualityFilter').value || '',
+    searchAppend: $('searchAppend').value || ''
   };
   await api('/api/filters', { method: 'POST', body: JSON.stringify(filters) });
   state.filters = filters;
@@ -864,7 +884,11 @@ selectSearch.addEventListener('input', () => filterWatchlist(selectSearch.value)
 
 // Auto search: find best quality
 async function autoSearch(movie) {
-  const query = movie.name + (movie.year ? ` ${movie.year}` : '');
+  let query = movie.name + (movie.year ? ` ${movie.year}` : '');
+  const qf = (state.filters.qualityFilter || '').trim();
+  const sa = (state.filters.searchAppend || '').trim();
+  if (sa) query += ' ' + sa;
+  if (qf) query += ' ' + qf;
   showResults(null, 'Searching for best quality...');
   const data = await api('/api/search', { method: 'POST', body: JSON.stringify({ query }) });
   if (!data || data.length === 0) {
@@ -875,28 +899,42 @@ async function autoSearch(movie) {
   showResults(data);
   if (best) {
     autoDownload(best, movie.name);
+  } else {
+    showToast('No acceptable quality found (CAM/TS/TC filtered)', 'error');
   }
 }
 
+function getQScore(name) {
+  if (/\b(2160p|4k|uhd)\b/i.test(name)) return 4;
+  if (/\b(1080p|bluray|blu-ray|brrip|bdrip)\b/i.test(name)) return 3;
+  if (/\b(720p|webdl|webrip|web|web-dl|hdtv)\b/i.test(name)) return 2;
+  if (/\b(dvdrip|dvd)\b/i.test(name)) return 1;
+  return 0;
+}
+function getMinQualityScore(filter) {
+  if (/\b(2160p|4k|uhd)\b/i.test(filter)) return 4;
+  if (/\b(1080p|bluray|blu-ray|brrip|bdrip)\b/i.test(filter)) return 3;
+  if (/\b(720p)\b/i.test(filter)) return 2;
+  return 0;
+}
 function findBestQuality(results) {
-  // Filter out CAM, TS, TC, R5, etc.
   const badQuals = /\b(cam|ts|tc|r5|screener|hdts|hdcam|telesync|telecine|predvdrip)\b/i;
-  const filtered = results.filter(r => !badQuals.test(r.name));
-  const pool = filtered.length > 0 ? filtered : results;
-  // Sort by seeds descending, prefer higher quality
-  pool.sort((a, b) => {
-    const qScore = (name) => {
-      if (/\b(2160p|4k|uhd)\b/i.test(name)) return 4;
-      if (/\b(1080p|bluray|blu-ray|brrip|bdrip)\b/i.test(name)) return 3;
-      if (/\b(720p|webdl|webrip|web)\b/i.test(name)) return 2;
-      if (/\b(dvdrip|dvd)\b/i.test(name)) return 1;
-      return 0;
-    };
-    const score = qScore(b.name) - qScore(a.name);
+  const withMagnets = results.filter(r => r.magnet);
+  const pool = withMagnets.length > 0 ? withMagnets : results;
+  const filtered = pool.filter(r => !badQuals.test(r.name));
+  if (filtered.length === 0) return null;
+  const qualityTag = /\b(2160p|4k|uhd|1080p|bluray|blu-ray|brrip|bdrip|720p|webdl|webrip|web|web-dl|hdtv|x264|x265|hevc|dvdrip|dvd)\b/i;
+  const withQuality = filtered.filter(r => qualityTag.test(r.name));
+  if (withQuality.length === 0) return null;
+  const minScore = getMinQualityScore(state.filters.qualityFilter || '');
+  const valid = minScore > 0 ? withQuality.filter(r => getQScore(r.name) >= minScore) : withQuality;
+  if (valid.length === 0) return null;
+  valid.sort((a, b) => {
+    const score = getQScore(b.name) - getQScore(a.name);
     if (score !== 0) return -score;
     return b.seeds - a.seeds;
   });
-  return pool[0];
+  return valid[0];
 }
 
 async function autoDownload(result, movieName) {
@@ -923,6 +961,15 @@ async function manualSearch() {
   showResults(null, 'Searching...');
   const data = await api('/api/search', { method: 'POST', body: JSON.stringify({ query: q }) });
   showResults(data || []);
+}
+
+// Trigger download helper
+function triggerDownload(r) {
+  const magnet = r.magnet;
+  if (!magnet) return showToast('No magnet link available', 'error');
+  api('/api/download', {
+    method: 'POST', body: JSON.stringify({ magnet, name: r.name, seeds: r.seeds, peers: r.peers })
+  }).then(d => { if (d) showToast(`Downloading: ${r.name}`); });
 }
 
 // Display results
@@ -960,24 +1007,38 @@ function showResults(results, loadingMsg) {
       <div class="r-size">${size}</div>
       <div class="r-seeds ${seedClass}"><i class="fas fa-arrow-up"></i> ${r.seeds}</div>
       <div class="r-source">${r.source || 'unknown'}</div>
-      <div class="r-action"><i class="fas fa-download"></i></div>
+      <div class="r-actions">
+        <button class="btn-dl" title="Download"><i class="fas fa-download"></i></button>
+        <button class="btn-copy" title="Copy magnet"><i class="fas fa-link"></i></button>
+        <button class="btn-open" title="Open in external app"><i class="fas fa-up-right-from-square"></i></button>
+      </div>
     `;
-    div.addEventListener('click', () => {
-      const magnet = r.magnet;
-      if (!magnet) return showToast('No magnet link available', 'error');
-      api('/api/download', {
-        method: 'POST', body: JSON.stringify({ magnet, name: r.name })
-      }).then(d => { if (d) showToast(`Downloading: ${r.name}`); });
+    div.querySelector('.btn-dl').addEventListener('click', (e) => {
+      e.stopPropagation();
+      triggerDownload(r);
+    });
+    div.querySelector('.btn-copy').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!r.magnet) return showToast('No magnet link', 'error');
+      navigator.clipboard.writeText(r.magnet).then(() => showToast('Magnet copied')).catch(() => showToast('Failed to copy', 'error'));
+    });
+    div.querySelector('.btn-open').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!r.magnet) return showToast('No magnet link', 'error');
+      api('/api/open-magnet', { method: 'POST', body: JSON.stringify({ magnet: r.magnet }) })
+        .then(() => showToast('Opened in external app'));
     });
     list.appendChild(div);
   });
 }
 
 // Downloads polling
+const cancelledIds = new Set();
+
 async function pollDownloads() {
   const data = await api('/api/downloads');
   if (!data) return;
-  state.downloads = data.active || [];
+  state.downloads = (data.active || []).filter(d => !cancelledIds.has(d.id));
   state.files = data.completed || [];
   renderDownloads();
   renderFiles();
@@ -1001,6 +1062,8 @@ function renderDownloads() {
     const eta = d.timeRemaining ? formatTime(d.timeRemaining) : '';
     const div = document.createElement('div');
     div.className = 'download-item';
+    const totalSize = d.length || (d.files && d.files.length ? d.files.reduce((s,f) => s + (f.length||0), 0) : 0);
+    const totalSizeStr = formatBytes(totalSize);
     div.innerHTML = `
       <div class="d-header">
         <span class="d-name">${d.name}</span>
@@ -1008,10 +1071,24 @@ function renderDownloads() {
       </div>
       <div class="d-progress"><div class="bar" style="width:${pct}%"></div></div>
       <div class="d-info">
-        <span>${formatBytes(d.downloaded)} / ${formatBytes(d.length)}</span>
+        <span>${formatBytes(d.downloaded)} / ${totalSizeStr}</span>
         <span>${speed} ${eta ? '- ' + eta : ''}</span>
       </div>
+      <div class="d-meta" style="display:flex;gap:8px;font-size:11px;color:var(--text2);padding-top:4px;border-top:1px solid var(--border);margin-top:4px;align-items:center">
+        <span title="Size"><i class="fas fa-database"></i> ${totalSizeStr}</span>
+        <span title="Seeders"><i class="fas fa-arrow-up" style="color:var(--green)"></i> ${d.seeds || 0}</span>
+        <span title="Leechers"><i class="fas fa-arrow-down" style="color:var(--yellow)"></i> ${d.peers || 0}</span>
+        <button class="btn-cancel-dl" data-id="${d.id}" title="Cancel download" style="margin-left:auto;background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:4px"><i class="fas fa-times"></i></button>
+      </div>
     `;
+    const cancelBtn = div.querySelector('.btn-cancel-dl');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => {
+        cancelledIds.add(d.id);
+        api('/api/download/cancel', { method: 'POST', body: JSON.stringify({ id: d.id }) })
+          .then(r => { if (r && !r.error) showToast('Download cancelled'); });
+      });
+    }
     list.appendChild(div);
   });
 }
@@ -1036,13 +1113,22 @@ function renderFileNode(node, parent, path) {
     const folderPath = path ? path + '/' + node.name : node.name;
     const row = document.createElement('div');
     row.className = 'folder-row';
-    row.innerHTML = `<i class="fas fa-folder"></i>${node.name} <span style="color:var(--text2);font-size:11px;margin-left:auto">${node.children ? node.children.length : 0} items</span>`;
+    row.innerHTML = `<i class="fas fa-folder"></i>${node.name} <span style="color:var(--text2);font-size:11px;margin-left:auto">${node.children ? node.children.length : 0} items</span> <button class="btn-del-lib" title="Delete" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;padding:2px 4px;border-radius:3px;opacity:0.6"><i class="fas fa-trash"></i></button>`;
     const container = document.createElement('div');
     container.className = 'children';
     if (node.children) {
       node.children.forEach(c => renderFileNode(c, container, folderPath));
     }
-    row.addEventListener('click', () => container.classList.toggle('open'));
+    row.addEventListener('click', (e) => {
+      if (!e.target.closest('.btn-del-lib')) container.classList.toggle('open');
+    });
+    const delBtn = row.querySelector('.btn-del-lib');
+    if (delBtn) {
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteLibraryItem(node.path || folderPath, node.name);
+      });
+    }
     parent.appendChild(row);
     parent.appendChild(container);
   } else {
@@ -1050,13 +1136,27 @@ function renderFileNode(node, parent, path) {
     const row = document.createElement('div');
     row.className = 'file-row';
     const icon = node.isMedia ? 'fa-file-video' : 'fa-file';
-    row.innerHTML = `<i class="fas ${icon}"></i>${node.name} <span style="color:var(--text2);font-size:11px;margin-left:auto">${formatBytes(node.size)}</span>`;
+    row.innerHTML = `<i class="fas ${icon}"></i>${node.name} <span style="color:var(--text2);font-size:11px;margin-left:auto">${formatBytes(node.size)}</span> <button class="btn-del-lib" title="Delete" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;padding:2px 4px;border-radius:3px;opacity:0.6"><i class="fas fa-trash"></i></button>`;
     if (node.isMedia) {
-      row.style.cursor = 'pointer';
-      row.addEventListener('click', () => playMedia(relPath, node.name));
+      row.addEventListener('click', (e) => {
+        if (!e.target.closest('.btn-del-lib')) playMedia(relPath, node.name);
+      });
+    }
+    const delBtn = row.querySelector('.btn-del-lib');
+    if (delBtn) {
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteLibraryItem(node.path || relPath, node.name);
+      });
     }
     parent.appendChild(row);
   }
+}
+
+function deleteLibraryItem(itemPath, name) {
+  if (!confirm(`Delete "${name}"?`)) return;
+  api('/api/library/delete', { method: 'POST', body: JSON.stringify({ path: itemPath }) })
+    .then(r => { if (r) showToast(`Deleted: ${name}`); });
 }
 
 function countFiles(items) {

@@ -26,6 +26,11 @@ app.use('/downloads', express.static(DOWNLOADS_DIR));
 
 const client = new WebTorrent();
 const activeDownloads: Record<string, any> = {};
+const torrentRefs: Record<string, any> = {};
+
+function esc(v: string): string {
+  return v.replace(/"/g, '\\"');
+}
 
 function torExec(args: string): string {
   const cmd = `node "${join(TOR_DL_DIR, 'dist', 'bin', 'tor-dl.js')}" ${args}`;
@@ -69,8 +74,11 @@ app.post('/api/search', (req, res) => {
   const { query } = req.body;
   if (!query) return res.status(400).json({ error: 'Query required' });
   try {
+    if (existsSync(CACHE_FILE)) {
+      try { writeFileSync(CACHE_FILE, JSON.stringify([])); } catch (_) {}
+    }
     const filters = loadFilters();
-    let args = `search "${query}" -l ${filters.limit || 70}`;
+    let args = `search "${esc(query)}" -l ${filters.limit || 70}`;
     if (filters.minSeeds > 0) args += ` -s ${filters.minSeeds}`;
     if (filters.maxSeeds > 0) args += ` --max-seeds ${filters.maxSeeds}`;
     if (filters.minSize && filters.minSize !== '0') args += ` --min-size ${filters.minSize}`;
@@ -158,34 +166,113 @@ app.post('/api/user', (req, res) => {
   }
 });
 
+const TRACKERS = [
+  'udp://tracker.coppersurfer.tk:6969',
+  'udp://tracker.leechers-paradise.org:6969',
+  'udp://tracker.opentrackr.org:1337',
+  'udp://tracker.open-internet.nl:6969',
+  'udp://tracker.internetwarriors.net:1337',
+  'udp://tracker.cyberia.is:6969',
+  'udp://explodie.org:6969',
+  'udp://tracker.tiny-vps.com:6969',
+  'udp://tracker.moeking.me:6969',
+  'wss://tracker.btorrent.xyz',
+  'wss://tracker.fastcast.nz',
+  'wss://tracker.openwebtorrent.com',
+  'wss://tracker.webtorrent.io'
+];
+
+function ensureTrackers(magnet: string): string {
+  if (magnet.includes('&tr=')) return magnet;
+  return magnet + TRACKERS.map(t => '&tr=' + encodeURIComponent(t)).join('');
+}
+
 app.post('/api/download', (req, res) => {
-  const { magnet, name } = req.body;
+  const { magnet, name, seeds, peers } = req.body;
   if (!magnet) return res.status(400).json({ error: 'Magnet URI required' });
+
+  const fullMagnet = ensureTrackers(magnet);
   const movieName = name || `movie-${Date.now()}`;
   const safeName = movieName.replace(/[<>:"/\\|?*]/g, '_').slice(0, 100);
   const savePath = join(DOWNLOADS_DIR, safeName);
   if (!existsSync(savePath)) mkdirSync(savePath, { recursive: true });
-  const torrent = client.add(magnet, { path: savePath });
-  const info = {
-    id: torrent.infoHash, name: safeName, path: savePath,
+
+  let torrent;
+  try {
+    torrent = client.add(fullMagnet, { path: savePath });
+  } catch (e: any) {
+    return res.status(400).json({ error: e.message });
+  }
+
+  const id = torrent.infoHash || `dl-${Date.now()}`;
+  const info: any = {
+    id, name: safeName, path: savePath,
     progress: 0, downloaded: 0, length: 0, speed: 0,
-    timeRemaining: 0, status: 'starting', files: [] as any[], magnet, error: ''
+    timeRemaining: 0, status: 'starting', files: [], magnet: fullMagnet,
+    error: '', seeds: seeds || 0, peers: peers || 0
   };
-  activeDownloads[torrent.infoHash] = info;
+  activeDownloads[id] = info;
+  torrentRefs[id] = torrent;
+
+  const readyTimeout = setTimeout(() => {
+    if (info.status === 'starting') {
+      info.status = 'stalled';
+      info.error = 'Timed out waiting for torrent metadata';
+    }
+  }, 180000);
+
   torrent.on('ready', () => {
+    clearTimeout(readyTimeout);
     info.status = 'downloading';
     info.length = torrent.length;
     info.files = (torrent.files || []).map((f: any) => ({ name: f.name, path: f.path, length: f.length }));
   });
+
   torrent.on('download', () => {
+    if (info.status === 'starting') {
+      info.status = 'downloading';
+      clearTimeout(readyTimeout);
+    }
     info.progress = torrent.progress;
     info.downloaded = torrent.downloaded;
     info.speed = torrent.downloadSpeed;
     info.timeRemaining = torrent.timeRemaining;
   });
-  torrent.on('done', () => { info.status = 'completed'; info.progress = 1; });
-  torrent.on('error', (err: Error) => { info.status = 'error'; info.error = err.message; });
-  res.json({ id: torrent.infoHash, name: safeName });
+
+  torrent.on('done', () => { info.status = 'completed'; info.progress = 1; info.length = torrent.length; });
+  torrent.on('error', (err: Error) => { info.status = 'error'; info.error = err.message; clearTimeout(readyTimeout); });
+
+  res.json({ id, name: safeName });
+});
+
+app.post('/api/download/cancel', (req, res) => {
+  const { id } = req.body;
+  if (!id || !activeDownloads[id]) return res.status(404).json({ error: 'Download not found' });
+  try {
+    client.remove(torrentRefs[id] || id);
+  } catch (_) { /* torrent may already be gone */ }
+  delete activeDownloads[id];
+  delete torrentRefs[id];
+  res.json({ ok: true });
+});
+
+app.post('/api/library/delete', (req, res) => {
+  const { path: targetPath } = req.body;
+  if (!targetPath) return res.status(400).json({ error: 'Path required' });
+  const fullPath = resolve(targetPath);
+  if (!fullPath.startsWith(resolve(DOWNLOADS_DIR))) return res.status(403).json({ error: 'Forbidden' });
+  if (!existsSync(fullPath)) return res.status(404).json({ error: 'Not found' });
+  try {
+    const stat = statSync(fullPath);
+    if (stat.isDirectory()) {
+      execSync(`rmdir /s /q "${fullPath}"`, { stdio: 'pipe' });
+    } else {
+      execSync(`del /f /q "${fullPath}"`, { stdio: 'pipe' });
+    }
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get('/api/downloads', (_req, res) => {
@@ -211,6 +298,19 @@ app.post('/api/open-download', (_req, res) => {
   try {
     const cmd = process.platform === 'win32' ? `explorer "${DOWNLOADS_DIR}"` :
                 process.platform === 'darwin' ? `open "${DOWNLOADS_DIR}"` : `xdg-open "${DOWNLOADS_DIR}"`;
+    exec(cmd);
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/open-magnet', (req, res) => {
+  const { magnet } = req.body;
+  if (!magnet) return res.status(400).json({ error: 'Magnet required' });
+  try {
+    const cmd = process.platform === 'win32' ? `start "" "${magnet}"` :
+                process.platform === 'darwin' ? `open "${magnet}"` : `xdg-open "${magnet}"`;
     exec(cmd);
     res.json({ ok: true });
   } catch (e: any) {
@@ -246,6 +346,11 @@ app.get('/api/media/*', (req, res) => {
     res.writeHead(200, { 'Content-Length': fileSize, 'Content-Type': contentType });
     createReadStream(fullPath).pipe(res);
   }
+});
+
+app.use((err: any, _req: any, res: any, _next: any) => {
+  console.error('Server error:', err);
+  res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
 });
 
 app.listen(PORT, () => console.log(`Movie Downloader running at http://localhost:${PORT}`));
