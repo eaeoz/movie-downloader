@@ -256,10 +256,8 @@ body {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .result-item .r-size { font-size: 12px; color: var(--text2); min-width: 70px; text-align: right; }
-.result-item .r-seeds { font-size: 12px; min-width: 50px; text-align: right; }
-.result-item .r-seeds.high { color: var(--green); }
-.result-item .r-seeds.med { color: var(--yellow); }
-.result-item .r-seeds.low { color: var(--red); }
+.result-item .r-seeds { font-size: 12px; min-width: 50px; text-align: right; color: var(--green); }
+.result-item .r-leech { font-size: 12px; min-width: 40px; text-align: right; color: var(--red); }
 .result-item .r-source {
   font-size: 11px; padding: 2px 8px;
   border-radius: 4px; background: var(--bg3);
@@ -1137,7 +1135,8 @@ function showResults(results, loadingMsg) {
     div.innerHTML = `
       <div class="r-name"><i class="fas fa-magnet" style="color:var(--primary);margin-right:6px;font-size:11px"></i>${r.name}</div>
       <div class="r-size">${size}</div>
-      <div class="r-seeds ${seedClass}"><i class="fas fa-arrow-up"></i> ${r.seeds}</div>
+      <div class="r-seeds ${seedClass}" title="Seeders"><i class="fas fa-arrow-up"></i> ${r.seeds}</div>
+      <div class="r-leech" title="Leechers"><i class="fas fa-arrow-down"></i> ${r.peers || 0}</div>
       <div class="r-source">${r.source || 'unknown'}</div>
       <div class="r-actions">
         <button class="btn-dl" title="Download"><i class="fas fa-download"></i></button>

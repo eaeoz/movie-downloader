@@ -299,19 +299,18 @@ app.post('/api/user', (req, res) => {
 });
 
 const TRACKERS = [
-  'udp://tracker.coppersurfer.tk:6969',
-  'udp://tracker.leechers-paradise.org:6969',
   'udp://tracker.opentrackr.org:1337',
-  'udp://tracker.open-internet.nl:6969',
-  'udp://tracker.internetwarriors.net:1337',
-  'udp://tracker.cyberia.is:6969',
-  'udp://explodie.org:6969',
-  'udp://tracker.tiny-vps.com:6969',
+  'udp://tracker.torrent.eu.org:451',
   'udp://tracker.moeking.me:6969',
+  'udp://explodie.org:6969',
+  'udp://open.demonii.com:1337',
+  'udp://tracker.cyberia.is:6969',
+  'udp://tracker.dump.cl:6969',
+  'https://tracker.nanoha.org:443',
+  'https://tracker.tamersunion.org:443',
   'wss://tracker.btorrent.xyz',
-  'wss://tracker.fastcast.nz',
   'wss://tracker.openwebtorrent.com',
-  'wss://tracker.webtorrent.io'
+  'wss://tracker.fastcast.nz'
 ];
 
 function ensureTrackers(magnet: string): string {
