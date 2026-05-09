@@ -10,7 +10,14 @@ import WebTorrent from 'webtorrent';
 const app = express();
 const PORT = process.env.PORT || 3555;
 const SETTINGS_FILE = process.env.ELECTRON_USERDATA ? join(process.env.ELECTRON_USERDATA, 'settings.json') : join(__dirname, 'settings.json');
-const TOR_DL_DIR = process.env.TOR_DL_PATH || join(__dirname, '..', 'tor-dl');
+const TOR_DL_PROJECT = process.env.TOR_DL_PATH || join(__dirname, '..', 'tor-dl');
+const TOR_DL_DIR = process.env.ELECTRON_USERDATA
+  ? (() => {
+      const d = join(process.env.ELECTRON_USERDATA, 'tor-dl');
+      if (!existsSync(d)) mkdirSync(d, { recursive: true });
+      return d;
+    })()
+  : TOR_DL_PROJECT;
 
 function getDownloadsDir(): string {
   const settings = loadSettingsFile();
@@ -36,6 +43,23 @@ function saveSettingsFile(data: any): any {
   return merged;
 }
 
+const CONFIG_DIR = process.env.ELECTRON_USERDATA ? join(process.env.ELECTRON_USERDATA, 'config') : TOR_DL_DIR;
+
+if (!existsSync(CONFIG_DIR)) {
+  mkdirSync(CONFIG_DIR, { recursive: true });
+}
+// In Electron mode, migrate config from the original tor-dl project dir
+if (process.env.ELECTRON_USERDATA && existsSync(TOR_DL_PROJECT)) {
+  try {
+    for (const f of ['users.json', 'filters.json', 'sources.json', '.watchlist-cache.json', 'settings.json']) {
+      const src = join(TOR_DL_PROJECT, f);
+      if (existsSync(src) && !existsSync(join(TOR_DL_DIR, f))) {
+        writeFileSync(join(TOR_DL_DIR, f), readFileSync(src));
+      }
+    }
+  } catch (_) {}
+}
+
 const CACHE_FILE = join(tmpdir(), 'tor-dl-cache.json');
 const WATCHLIST_CACHE = join(TOR_DL_DIR, '.watchlist-cache.json');
 const FILTERS_FILE = join(TOR_DL_DIR, 'filters.json');
@@ -58,7 +82,8 @@ function esc(v: string): string {
 }
 
 function torExec(args: string): string {
-  const cmd = `node "${join(TOR_DL_DIR, 'dist', 'bin', 'tor-dl.js')}" ${args}`;
+  const binDir = existsSync(join(TOR_DL_DIR, 'dist', 'bin', 'tor-dl.js')) ? TOR_DL_DIR : TOR_DL_PROJECT;
+  const cmd = `node "${join(binDir, 'dist', 'bin', 'tor-dl.js')}" ${args}`;
   try {
     return execSync(cmd, {
       cwd: TOR_DL_DIR, encoding: 'utf-8', timeout: 60000,
@@ -204,7 +229,7 @@ app.post('/api/user', (req, res) => {
   try {
     const { username } = req.body;
     writeFileSync(USERS_FILE, JSON.stringify({ letterboxd: { username } }, null, 2));
-    torExec(`setuser "${username}"`);
+    try { torExec(`setuser "${username}"`); } catch (_) {}
     res.json({ ok: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
