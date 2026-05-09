@@ -628,7 +628,11 @@ body {
         </div>
         <div class="filter-field">
           <label>Search Quality</label>
-          <input type="text" id="qualityFilter" placeholder="e.g. 1080p, 720p, 2160p">
+          <select id="qualityFilter">
+            <option value="">Any</option>
+            <option value="720p">720p</option>
+            <option value="1080p">1080p</option>
+          </select>
         </div>
         <div class="filter-field" style="grid-column: span 2">
           <label>Append to Search Query</label>
@@ -750,12 +754,15 @@ async function loadSources() {
   const data = await api('/api/sources');
   if (!data) return;
   state.sources = data;
+  const working = new Set(['yts', 'torrentscsv', 'thepiratebay', 'rargb']);
   const grid = $('sourceGrid');
   grid.innerHTML = '';
   for (const [key, src] of Object.entries(data)) {
     const label = document.createElement('label');
     label.className = 'source-option' + (src.enabled ? ' active' : '');
-    label.innerHTML = `<input type="checkbox" ${src.enabled ? 'checked' : ''}> ${src.name}`;
+    const badge = working.has(key) ? ' <span style="color:var(--yellow);font-size:11px">✓</span>' : ' <span style="color:var(--red);font-size:11px" title="Not working">✗</span>';
+    label.innerHTML = `<input type="checkbox" ${src.enabled ? 'checked' : ''}> ${src.name}${badge}`;
+    if (working.has(key)) label.style.borderColor = 'var(--yellow)';
     label.querySelector('input').addEventListener('change', () => {
       label.classList.toggle('active');
     });
@@ -775,7 +782,7 @@ async function loadFilters() {
   $('order').value = data.order || 'desc';
   $('category').value = data.category || 'all';
   $('limit').value = data.limit || 70;
-  $('qualityFilter').value = data.qualityFilter || '';
+  $('qualityFilter').value = data.qualityFilter || '1080p';
   $('searchAppend').value = data.searchAppend || '';
 }
 
