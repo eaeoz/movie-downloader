@@ -1,5 +1,6 @@
 node_modules/
 downloads/
+dist/
 server.js
 *.js.map
 .DS_Store

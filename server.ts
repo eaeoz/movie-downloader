@@ -9,7 +9,7 @@ import WebTorrent from 'webtorrent';
 
 const app = express();
 const PORT = process.env.PORT || 3555;
-const SETTINGS_FILE = join(__dirname, 'settings.json');
+const SETTINGS_FILE = process.env.ELECTRON_USERDATA ? join(process.env.ELECTRON_USERDATA, 'settings.json') : join(__dirname, 'settings.json');
 const TOR_DL_DIR = process.env.TOR_DL_PATH || join(__dirname, '..', 'tor-dl');
 
 function getDownloadsDir(): string {
