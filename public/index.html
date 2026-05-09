@@ -456,6 +456,25 @@ body {
 .toast.error { border-color: var(--red); }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
+/* Help Modal */
+.help-section {
+  margin-bottom: 18px; padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.help-section h4 {
+  font-size: 14px; font-weight: 600; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.help-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--primary); text-decoration: none;
+  padding: 6px 12px; border-radius: 6px;
+  background: rgba(108,92,231,0.08);
+  word-break: break-all;
+  transition: background 0.2s;
+}
+.help-link:hover { background: rgba(108,92,231,0.15); text-decoration: underline; }
+
 /* Empty state */
 .empty-state {
   text-align: center; padding: 32px 16px; color: var(--text2);
@@ -518,6 +537,7 @@ body {
               <div class="options-container"></div>
             </div>
           </div>
+          <button class="btn btn-outline" id="helpLetterboxd" title="How to use Letterboxd"><i class="fas fa-question-circle"></i></button>
           <button class="btn btn-outline" id="refreshWatchlist"><i class="fas fa-sync-alt"></i></button>
         </div>
 
@@ -655,6 +675,47 @@ body {
   </div>
 </div>
 
+<!-- Letterboxd Help Modal -->
+<div class="modal-overlay" id="helpModal">
+  <div class="modal" style="max-width:620px">
+    <h2><i class="fas fa-film" style="color:var(--primary)"></i>Letterboxd Guide <button class="close-modal" id="closeHelp"><i class="fas fa-times"></i></button></h2>
+
+    <div class="help-section">
+      <h4><i class="fas fa-mobile-alt" style="color:var(--accent);width:20px"></i> Mobile App</h4>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:8px">Download the official Letterboxd app to build and manage your watchlist on the go:</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a href="https://play.google.com/store/apps/details?id=com.letterboxd.letterboxd" target="_blank" class="btn btn-sm" style="background:#1a1a2e;border:1px solid var(--border);color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:8px"><i class="fab fa-android" style="color:#3ddc84;font-size:16px"></i> Android</a>
+        <a href="https://apps.apple.com/us/app/letterboxd/id1054271011" target="_blank" class="btn btn-sm" style="background:#1a1a2e;border:1px solid var(--border);color:var(--text);text-decoration:none;display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:8px"><i class="fab fa-apple" style="color:#fff;font-size:16px"></i> iOS</a>
+      </div>
+    </div>
+
+    <div class="help-section">
+      <h4><i class="fas fa-globe" style="color:var(--accent);width:20px"></i> Web (No Sign-In)</h4>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:6px">Browse popular movies without an account:</p>
+      <a href="https://letterboxd.com/films/popular/this/week/" target="_blank" class="help-link"><i class="fas fa-external-link-alt"></i> letterboxd.com/films/popular/this/week/</a>
+    </div>
+
+    <div class="help-section">
+      <h4><i class="fas fa-list" style="color:var(--accent);width:20px"></i> Your Watchlist</h4>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:6px">Find movies you want to watch. First set your Letterboxd username in the <strong>Settings</strong> <i class="fas fa-cog"></i> panel, then visit:</p>
+      <div style="font-size:13px;color:var(--text2);background:var(--bg3);padding:10px 14px;border-radius:6px;border:1px solid var(--border);word-break:break-all;font-family:monospace">
+        letterboxd.com/<span id="helpUsername" style="color:var(--yellow);font-weight:600">yourusername</span>/watchlist/
+      </div>
+      <p style="font-size:12px;color:var(--text2);margin-top:8px"><i class="fas fa-info-circle" style="color:var(--yellow)"></i> After saving your username, click the refresh button <i class="fas fa-sync-alt"></i> to load your watchlist into the dropdown above.</p>
+    </div>
+
+    <div class="help-section" style="border:none;margin-bottom:0">
+      <h4><i class="fas fa-search" style="color:var(--accent);width:20px"></i> How It Works</h4>
+      <ol style="font-size:13px;color:var(--text2);line-height:1.8;padding-left:18px;margin:0">
+        <li>Install the Letterboxd app on your phone and add movies to your watchlist.</li>
+        <li>Enter your Letterboxd username in <strong>Settings</strong> <i class="fas fa-cog"></i> and save.</li>
+        <li>Click refresh <i class="fas fa-sync-alt"></i> to sync your watchlist into the dropdown above.</li>
+        <li>Select a movie – <strong>Auto</strong> mode downloads the best quality, <strong>Manual</strong> lets you pick.</li>
+      </ol>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -734,6 +795,15 @@ $('settingsBtn').addEventListener('click', () => openSettings());
 $('closeSettings').addEventListener('click', () => $('settingsModal').classList.remove('open'));
 $('settingsModal').addEventListener('click', (e) => {
   if (e.target === $('settingsModal')) $('settingsModal').classList.remove('open');
+});
+
+$('helpLetterboxd').addEventListener('click', () => {
+  $('helpUsername').textContent = state.username || 'yourusername';
+  $('helpModal').classList.add('open');
+});
+$('closeHelp').addEventListener('click', () => $('helpModal').classList.remove('open'));
+$('helpModal').addEventListener('click', (e) => {
+  if (e.target === $('helpModal')) $('helpModal').classList.remove('open');
 });
 
 async function openSettings() {
