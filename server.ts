@@ -106,7 +106,24 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.static(join(__dirname, 'public')));
 app.use('/downloads', express.static(getDownloadsDir()));
 
-const client = new WebTorrent();
+const client = new WebTorrent({
+  dht: {
+    bootstrap: [
+      '67.215.246.10:6881',
+      '82.221.103.244:6881',
+      '23.157.48.162:6881',
+      'router.bittorrent.com:6881',
+      'dht.transmissionbt.com:6881',
+      'router.utorrent.com:6881'
+    ]
+  },
+  tracker: true,
+  utp: true,
+  webSeeds: true,
+  maxConns: 55
+});
+client.on('error', (e: Error) => console.error('[webtorrent] client error:', e.message));
+console.log('[server] WebTorrent client created');
 const activeDownloads: Record<string, any> = {};
 const torrentRefs: Record<string, any> = {};
 
@@ -299,23 +316,28 @@ app.post('/api/user', (req, res) => {
 });
 
 const TRACKERS = [
-  'udp://tracker.opentrackr.org:1337',
-  'udp://tracker.torrent.eu.org:451',
-  'udp://tracker.moeking.me:6969',
-  'udp://explodie.org:6969',
-  'udp://open.demonii.com:1337',
-  'udp://tracker.cyberia.is:6969',
-  'udp://tracker.dump.cl:6969',
-  'https://tracker.nanoha.org:443',
-  'https://tracker.tamersunion.org:443',
-  'wss://tracker.btorrent.xyz',
-  'wss://tracker.openwebtorrent.com',
-  'wss://tracker.fastcast.nz'
+  'udp://tracker.opentrackr.org:1337/announce',
+  'udp://tracker.torrent.eu.org:451/announce',
+  'udp://exodus.desync.com:6969/announce',
+  'udp://open.demonii.com:1337/announce',
+  'udp://open.stealth.si:80/announce',
+  'udp://tracker.moeking.me:6969/announce',
+  'udp://tracker.tryhackx.org:6969/announce',
+  'http://tracker.opentrackr.org:1337/announce',
+  'http://open.acgnxtracker.com:80/announce',
+  'http://tracker.files.fm:6969/announce',
+  'http://tracker.mywaifu.best:6969/announce',
+  'http://tracker.gbitt.info:80/announce',
+  'http://tracker.renfei.net:8080/announce',
+  'http://tracker.bt4g.com:2095/announce',
+  'http://tracker.tritan.gg:8080/announce',
+  'http://tracker.monitorit4.me:6969/announce'
 ];
 
 function ensureTrackers(magnet: string): string {
-  if (magnet.includes('&tr=')) return magnet;
-  return magnet + TRACKERS.map(t => '&tr=' + encodeURIComponent(t)).join('');
+  // Strip any existing trackers, then add our working list
+  const base = magnet.split('&tr=')[0];
+  return base + TRACKERS.map(t => '&tr=' + encodeURIComponent(t)).join('');
 }
 
 app.post('/api/download', (req, res) => {
@@ -323,17 +345,33 @@ app.post('/api/download', (req, res) => {
   if (!magnet) return res.status(400).json({ error: 'Magnet URI required' });
 
   const fullMagnet = ensureTrackers(magnet);
+  console.log('[download] fullMagnet:', fullMagnet.slice(0, 200) + '...');
   const movieName = name || `movie-${Date.now()}`;
   const safeName = movieName.replace(/[<>:"/\\|?*]/g, '_').slice(0, 100);
   const savePath = join(getDownloadsDir(), safeName);
   if (!existsSync(savePath)) mkdirSync(savePath, { recursive: true });
 
+  // Destroy any existing torrent for this magnet before re-adding
+  try {
+    const parsed = require('parse-torrent')(fullMagnet);
+    if (parsed && parsed.infoHash) {
+      const existing = client.torrents.find((t: any) => t.infoHash === parsed.infoHash);
+      if (existing) {
+        console.log('[download] Removing existing torrent:', parsed.infoHash);
+        client.remove(existing);
+      }
+    }
+  } catch (_) {}
+
   let torrent;
   try {
-    torrent = client.add(fullMagnet, { path: savePath });
+    torrent = client.add(fullMagnet, { path: savePath, announce: TRACKERS });
   } catch (e: any) {
     return res.status(400).json({ error: e.message });
   }
+  console.log('[download] Torrent added, infoHash:', torrent.infoHash || 'pending');
+  console.log('[download] Torrent ready:', torrent.ready);
+  console.log('[download] Torrent trackers:', torrent.announce ? torrent.announce.slice(0, 3) : 'none');
 
   const id = torrent.infoHash || `dl-${Date.now()}`;
   const info: any = {
@@ -342,6 +380,9 @@ app.post('/api/download', (req, res) => {
     timeRemaining: 0, status: 'starting', files: [], magnet: fullMagnet,
     error: '', seeds: seeds || 0, peers: peers || 0
   };
+  if (activeDownloads[id]) {
+    return res.json({ id, name: safeName, exists: true });
+  }
   activeDownloads[id] = info;
   torrentRefs[id] = torrent;
 
@@ -352,14 +393,34 @@ app.post('/api/download', (req, res) => {
     }
   }, 180000);
 
+  if (torrent.ready) {
+    clearTimeout(readyTimeout);
+    info.status = 'downloading';
+    info.length = torrent.length;
+    info.progress = torrent.progress;
+    info.downloaded = torrent.downloaded;
+    info.speed = torrent.downloadSpeed;
+    info.files = (torrent.files || []).map((f: any) => ({ name: f.name, path: f.path, length: f.length }));
+    if (torrent.progress === 1 && torrent.length > 0) {
+      const allExist = (torrent.files || []).every((f: any) => existsSync(join(savePath, f.path)));
+      if (allExist) info.status = 'completed';
+    }
+  }
+
   torrent.on('ready', () => {
+    console.log('[download] Event: ready, infoHash:', torrent.infoHash);
     clearTimeout(readyTimeout);
     info.status = 'downloading';
     info.length = torrent.length;
     info.files = (torrent.files || []).map((f: any) => ({ name: f.name, path: f.path, length: f.length }));
+    if (torrent.progress === 1 && torrent.length > 0) {
+      const allExist = (torrent.files || []).every((f: any) => existsSync(join(savePath, f.path)));
+      if (allExist) info.status = 'completed';
+    }
   });
 
   torrent.on('download', () => {
+    console.log('[download] Event: download, progress:', torrent.progress);
     if (info.status === 'starting') {
       info.status = 'downloading';
       clearTimeout(readyTimeout);
@@ -370,8 +431,23 @@ app.post('/api/download', (req, res) => {
     info.timeRemaining = torrent.timeRemaining;
   });
 
-  torrent.on('done', () => { info.status = 'completed'; info.progress = 1; info.length = torrent.length; });
-  torrent.on('error', (err: Error) => { info.status = 'error'; info.error = err.message; clearTimeout(readyTimeout); });
+  torrent.on('done', () => {
+    console.log('[download] Event: done, infoHash:', torrent.infoHash);
+    info.status = 'completed'; info.progress = 1; info.length = torrent.length;
+  });
+  torrent.on('error', (err: Error) => {
+    console.log('[download] Event: error, infoHash:', torrent.infoHash, 'error:', err.message);
+    info.status = 'error'; info.error = err.message; clearTimeout(readyTimeout);
+  });
+  torrent.on('warning', (err: Error) => {
+    console.log('[download] Event: warning:', err.message);
+  });
+  torrent.on('infoHash', () => {
+    console.log('[download] Event: infoHash:', torrent.infoHash);
+  });
+  torrent.on('metadata', () => {
+    console.log('[download] Event: metadata');
+  });
 
   res.json({ id, name: safeName });
 });
@@ -379,8 +455,12 @@ app.post('/api/download', (req, res) => {
 app.post('/api/download/cancel', (req, res) => {
   const { id } = req.body;
   if (!id || !activeDownloads[id]) return res.status(404).json({ error: 'Download not found' });
+  const info = activeDownloads[id];
   try {
-    client.remove(torrentRefs[id] || id);
+    const torrent = torrentRefs[id];
+    if (torrent) {
+      client.remove(torrent);
+    }
   } catch (_) { /* torrent may already be gone */ }
   delete activeDownloads[id];
   delete torrentRefs[id];
