@@ -641,6 +641,14 @@ body {
       </div>
     </div>
 
+    <div class="settings-section">
+      <h4><i class="fas fa-folder-open" style="margin-right:6px"></i>Download Location</h4>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="downloadPath" readonly style="flex:1;padding:8px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:13px;outline:none;cursor:not-allowed">
+        <button class="btn btn-sm btn-primary" id="browsePath"><i class="fas fa-folder-open"></i></button>
+      </div>
+    </div>
+
     <div class="filter-actions">
       <button class="btn btn-primary" id="saveSettings"><i class="fas fa-check"></i>Save Settings</button>
     </div>
@@ -729,8 +737,15 @@ $('settingsModal').addEventListener('click', (e) => {
 });
 
 async function openSettings() {
-  await Promise.all([loadSources(), loadFilters(), loadUsername()]);
+  await Promise.all([loadSources(), loadFilters(), loadUsername(), loadDownloadSettings()]);
   $('settingsModal').classList.add('open');
+}
+
+async function loadDownloadSettings() {
+  const data = await api('/api/settings');
+  if (data) {
+    $('downloadPath').value = data.downloadPath || '';
+  }
 }
 
 async function loadUsername() {
@@ -811,8 +826,28 @@ $('saveSettings').addEventListener('click', async () => {
   };
   await api('/api/filters', { method: 'POST', body: JSON.stringify(filters) });
   state.filters = filters;
+  const dlPath = $('downloadPath').value;
+  if (dlPath) {
+    await api('/api/settings', { method: 'POST', body: JSON.stringify({ downloadPath: dlPath }) });
+  }
   showToast('Settings saved');
   $('settingsModal').classList.remove('open');
+});
+
+$('browsePath').addEventListener('click', async () => {
+  let folder = null;
+  if (window.electronAPI) {
+    folder = await window.electronAPI.selectFolder();
+  } else {
+    folder = prompt('Enter download folder path:');
+  }
+  if (folder) {
+    const r = await api('/api/settings', { method: 'POST', body: JSON.stringify({ downloadPath: folder }) });
+    if (r && r.ok !== false) {
+      $('downloadPath').value = folder;
+      showToast('Download path updated');
+    }
+  }
 });
 
 // Watchlist

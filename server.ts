@@ -8,21 +8,46 @@ import { tmpdir } from 'os';
 import WebTorrent from 'webtorrent';
 
 const app = express();
-const PORT = 3555;
-const TOR_DL_DIR = join(__dirname, '..', 'tor-dl');
-const DOWNLOADS_DIR = join(__dirname, 'downloads');
+const PORT = process.env.PORT || 3555;
+const SETTINGS_FILE = join(__dirname, 'settings.json');
+const TOR_DL_DIR = process.env.TOR_DL_PATH || join(__dirname, '..', 'tor-dl');
+
+function getDownloadsDir(): string {
+  const settings = loadSettingsFile();
+  return settings.downloadPath || process.env.DOWNLOAD_PATH || join(__dirname, 'downloads');
+}
+
+function ensureDownloadsDir(): void {
+  const d = getDownloadsDir();
+  if (!existsSync(d)) mkdirSync(d, { recursive: true });
+}
+
+function loadSettingsFile(): any {
+  try {
+    if (existsSync(SETTINGS_FILE)) return JSON.parse(readFileSync(SETTINGS_FILE, 'utf-8'));
+  } catch (_) {}
+  return {};
+}
+
+function saveSettingsFile(data: any): any {
+  const current = loadSettingsFile();
+  const merged = { ...current, ...data };
+  writeFileSync(SETTINGS_FILE, JSON.stringify(merged, null, 2));
+  return merged;
+}
+
 const CACHE_FILE = join(tmpdir(), 'tor-dl-cache.json');
 const WATCHLIST_CACHE = join(TOR_DL_DIR, '.watchlist-cache.json');
 const FILTERS_FILE = join(TOR_DL_DIR, 'filters.json');
 const SOURCES_FILE = join(TOR_DL_DIR, 'sources.json');
 const USERS_FILE = join(TOR_DL_DIR, 'users.json');
 
-if (!existsSync(DOWNLOADS_DIR)) mkdirSync(DOWNLOADS_DIR, { recursive: true });
+ensureDownloadsDir();
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(join(__dirname, 'public')));
-app.use('/downloads', express.static(DOWNLOADS_DIR));
+app.use('/downloads', express.static(getDownloadsDir()));
 
 const client = new WebTorrent();
 const activeDownloads: Record<string, any> = {};
@@ -124,6 +149,26 @@ app.post('/api/sources', (req, res) => {
   }
 });
 
+app.get('/api/settings', (_req, res) => {
+  res.json(loadSettingsFile());
+});
+
+app.post('/api/settings', (req, res) => {
+  try {
+    const { downloadPath } = req.body;
+    if (downloadPath) {
+      if (!existsSync(downloadPath)) mkdirSync(downloadPath, { recursive: true });
+      saveSettingsFile({ downloadPath });
+      const downloadsDir = getDownloadsDir();
+      res.json({ ok: true, downloadPath });
+    } else {
+      res.status(400).json({ error: 'downloadPath required' });
+    }
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 function loadFilters(): any {
   if (existsSync(FILTERS_FILE)) {
     return JSON.parse(readFileSync(FILTERS_FILE, 'utf-8'));
@@ -194,7 +239,7 @@ app.post('/api/download', (req, res) => {
   const fullMagnet = ensureTrackers(magnet);
   const movieName = name || `movie-${Date.now()}`;
   const safeName = movieName.replace(/[<>:"/\\|?*]/g, '_').slice(0, 100);
-  const savePath = join(DOWNLOADS_DIR, safeName);
+  const savePath = join(getDownloadsDir(), safeName);
   if (!existsSync(savePath)) mkdirSync(savePath, { recursive: true });
 
   let torrent;
@@ -260,7 +305,8 @@ app.post('/api/library/delete', (req, res) => {
   const { path: targetPath } = req.body;
   if (!targetPath) return res.status(400).json({ error: 'Path required' });
   const fullPath = resolve(targetPath);
-  if (!fullPath.startsWith(resolve(DOWNLOADS_DIR))) return res.status(403).json({ error: 'Forbidden' });
+  const dlDir = getDownloadsDir();
+  if (!fullPath.startsWith(resolve(dlDir))) return res.status(403).json({ error: 'Forbidden' });
   if (!existsSync(fullPath)) return res.status(404).json({ error: 'Not found' });
   try {
     const stat = statSync(fullPath);
@@ -279,7 +325,7 @@ app.get('/api/downloads', (_req, res) => {
   res.json({ active: Object.values(activeDownloads), completed: getDownloadedFiles() });
 });
 
-function getDownloadedFiles(dir = DOWNLOADS_DIR): any[] {
+function getDownloadedFiles(dir = getDownloadsDir()): any[] {
   if (!existsSync(dir)) return [];
   try {
     return readdirSync(dir).map(entry => {
@@ -296,8 +342,9 @@ function getDownloadedFiles(dir = DOWNLOADS_DIR): any[] {
 
 app.post('/api/open-download', (_req, res) => {
   try {
-    const cmd = process.platform === 'win32' ? `explorer "${DOWNLOADS_DIR}"` :
-                process.platform === 'darwin' ? `open "${DOWNLOADS_DIR}"` : `xdg-open "${DOWNLOADS_DIR}"`;
+    const d = getDownloadsDir();
+    const cmd = process.platform === 'win32' ? `explorer "${d}"` :
+                process.platform === 'darwin' ? `open "${d}"` : `xdg-open "${d}"`;
     exec(cmd);
     res.json({ ok: true });
   } catch (e: any) {
@@ -319,8 +366,9 @@ app.post('/api/open-magnet', (req, res) => {
 });
 
 app.get('/api/media/*', (req, res) => {
-  const fullPath = resolve(DOWNLOADS_DIR, req.params[0] || '');
-  if (!fullPath.startsWith(resolve(DOWNLOADS_DIR))) return res.status(403).json({ error: 'Forbidden' });
+  const dlDir = getDownloadsDir();
+  const fullPath = resolve(dlDir, req.params[0] || '');
+  if (!fullPath.startsWith(resolve(dlDir))) return res.status(403).json({ error: 'Forbidden' });
   if (!existsSync(fullPath)) return res.status(404).json({ error: 'Not found' });
   const ext = extname(fullPath).toLowerCase();
   const mimeMap: Record<string, string> = {
