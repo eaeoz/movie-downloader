@@ -115,9 +115,8 @@ function esc(v: string): string {
 }
 
 function torExec(args: string): string {
-  const binDir = existsSync(join(TOR_DL_DIR, 'dist', 'bin', 'tor-dl.js')) ? TOR_DL_DIR : TOR_DL_PROJECT;
-  const cmd = `node "${join(binDir, 'dist', 'bin', 'tor-dl.js')}" ${args}`;
-  console.log('[torExec] binDir:', binDir);
+  const cmd = `node "${join(TOR_DL_PROJECT, 'dist', 'bin', 'tor-dl.js')}" ${args}`;
+  console.log('[torExec] script:', join(TOR_DL_PROJECT, 'dist', 'bin', 'tor-dl.js'));
   console.log('[torExec] cwd:', TOR_DL_DIR);
   console.log('[torExec] cmd:', cmd);
   console.log('[torExec] USERS_FILE location:', join(TOR_DL_DIR, 'users.json'));
@@ -197,7 +196,11 @@ app.post('/api/search', (req, res) => {
     if (filters.sources) args += ` -S "${filters.sources}"`;
     torExec(args);
     if (existsSync(CACHE_FILE)) {
-      return res.json(JSON.parse(readFileSync(CACHE_FILE, 'utf-8')));
+      try {
+        return res.json(JSON.parse(readFileSync(CACHE_FILE, 'utf-8')));
+      } catch (_) {
+        console.log('[search] cache parse error, returning empty array');
+      }
     }
     res.json([]);
   } catch (e: any) {

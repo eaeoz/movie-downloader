@@ -1023,7 +1023,7 @@ async function autoSearch(movie) {
   if (qf) query += ' ' + qf;
   showResults(null, 'Searching for best quality...');
   const data = await api('/api/search', { method: 'POST', body: JSON.stringify({ query }) });
-  if (!data || data.length === 0) {
+  if (!data || !Array.isArray(data) || data.length === 0) {
     showResults([], 'No results found');
     return;
   }
