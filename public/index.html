@@ -376,25 +376,34 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 28px;
   max-width: 560px; width: 90%;
-  max-height: 85vh; overflow-y: auto;
+  max-height: 90vh;
+  display: flex; flex-direction: column;
   box-shadow: 0 20px 60px rgba(0,0,0,0.5);
 }
-.modal h2 {
-  font-size: 18px; font-weight: 700; margin-bottom: 20px;
+.modal-header {
   display: flex; align-items: center; gap: 10px;
+  padding: 24px 28px 0 28px;
+  flex-shrink: 0;
 }
-.modal .close-modal {
+.modal-header h2 {
+  font-size: 18px; font-weight: 700;
+  display: flex; align-items: center; gap: 10px;
+  flex: 1; margin: 0;
+}
+.modal-close {
   margin-left: auto; background: none; border: none;
   color: var(--text2); cursor: pointer; font-size: 20px;
 }
-.modal .close-modal:hover { color: var(--red); }
-.modal-section { margin-bottom: 20px; }
-.modal-section h4 {
-  font-size: 13px; font-weight: 600; color: var(--text2);
-  text-transform: uppercase; letter-spacing: 0.5px;
-  margin-bottom: 10px;
+.modal-close:hover { color: var(--red); }
+.modal-body {
+  padding: 20px 28px 28px 28px;
+  overflow-y: auto;
+  flex: 1;
+}
+.modal-header + .modal-body,
+.modal-header + .modal-body {
+  border-top: 1px solid var(--border);
 }
 .source-grid {
   display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
@@ -581,7 +590,11 @@ body {
 <!-- Settings Modal -->
 <div class="modal-overlay" id="settingsModal">
   <div class="modal">
-    <h2><i class="fas fa-cog" style="color:var(--primary)"></i>Settings <button class="close-modal" id="closeSettings"><i class="fas fa-times"></i></button></h2>
+    <div class="modal-header">
+      <h2><i class="fas fa-cog" style="color:var(--primary)"></i>Settings</h2>
+      <button class="modal-close" id="closeSettings"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
 
     <div class="settings-section">
       <h4><i class="fas fa-user" style="margin-right:6px"></i>Letterboxd</h4>
@@ -673,12 +686,18 @@ body {
       <button class="btn btn-primary" id="saveSettings"><i class="fas fa-check"></i>Save Settings</button>
     </div>
   </div>
+  </div>
+</div>
 </div>
 
 <!-- Letterboxd Help Modal -->
 <div class="modal-overlay" id="helpModal">
   <div class="modal" style="max-width:620px">
-    <h2><i class="fas fa-film" style="color:var(--primary)"></i>Letterboxd Guide <button class="close-modal" id="closeHelp"><i class="fas fa-times"></i></button></h2>
+    <div class="modal-header">
+      <h2><i class="fas fa-film" style="color:var(--primary)"></i>Letterboxd Guide</h2>
+      <button class="modal-close" id="closeHelp"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
 
     <div class="help-section">
       <h4><i class="fas fa-mobile-alt" style="color:var(--accent);width:20px"></i> Mobile App</h4>
@@ -829,10 +848,14 @@ async function loadUsername() {
 $('saveUsername').addEventListener('click', async () => {
   const u = $('usernameInput').value.trim();
   if (!u) return showToast('Enter a username', 'error');
-  await api('/api/user', { method: 'POST', body: JSON.stringify({ username: u }) });
-  state.username = u;
-  showToast('Username saved');
-  loadWatchlist();
+  const res = await api('/api/user', { method: 'POST', body: JSON.stringify({ username: u }) });
+  if (res && !res.error) {
+    state.username = u;
+    showToast('Username saved');
+    loadWatchlist();
+  } else {
+    showToast(res?.error || 'Failed to save username', 'error');
+  }
 });
 
 async function loadSources() {

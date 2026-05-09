@@ -4,7 +4,7 @@
   "description": "Modern torrent downloader with Letterboxd integration",
   "main": "main.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node create-icon.js && npx electron-builder --win --x64 --publish never",
     "start": "node server.js",
     "dev": "ts-node server.ts",
     "electron": "electron .",
@@ -40,10 +40,6 @@
       ]
     },
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
       "installerIcon": "data/icon.ico",
       "uninstallerIcon": "data/icon.ico",
       "installerHeaderIcon": "data/icon.ico",
