@@ -3,6 +3,18 @@
   "version": "1.0.0",
   "description": "Modern torrent downloader with Letterboxd integration",
   "main": "main.js",
+  "author": {
+    "name": "Sedat Ergoz",
+    "email": "sedatergoz@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eaeoz/movie-downloader.git"
+  },
+  "bugs": {
+    "url": "https://github.com/eaeoz/movie-downloader/issues"
+  },
+  "homepage": "https://github.com/eaeoz/movie-downloader",
   "scripts": {
     "build": "tsc && node create-icon.js && npx electron-builder --win --x64 --publish never",
     "start": "node server.js",
@@ -16,6 +28,7 @@
   "build": {
     "appId": "com.moviedownloader.app",
     "productName": "Movie Downloader",
+    "copyright": "Copyright © 2026 Sedat Ergoz",
     "directories": {
       "output": "dist"
     },

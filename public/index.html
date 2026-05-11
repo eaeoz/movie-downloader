@@ -1373,67 +1373,26 @@ function renderFileNode(node, parent, path) {
 }
 
 function deleteLibraryItem(itemPath, name) {
-  const activeDownload = state.downloads.find(d =>
-    d.status !== 'completed' && (name === d.name || itemPath === d.name || itemPath.startsWith(d.name + '/') || itemPath.startsWith(d.name + '\\'))
-  );
-  showDeleteConfirm(itemPath, name, activeDownload || null);
-}
+  try {
+    const activeDownload = state.downloads.find(d =>
+      d.status !== 'completed' && (name === d.name || itemPath === d.name || itemPath.startsWith(d.name + '/') || itemPath.startsWith(d.name + '\\'))
+    );
 
-function showDeleteConfirm(itemPath, name, activeDownload) {
-  const msg = $('deleteModalMsg');
-  const actions = $('deleteModalActions');
-  actions.innerHTML = '';
-
-  if (activeDownload) {
-    msg.textContent = `"${name}" is currently downloading. What would you like to do?`;
-
-    const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'btn btn-sm';
-    cancelBtn.style.cssText = 'background:var(--red);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px';
-    cancelBtn.innerHTML = '<i class="fas fa-times"></i> Cancel Download & Delete';
-    cancelBtn.addEventListener('click', async () => {
-      $('deleteModal').classList.remove('open');
+    if (activeDownload) {
+      const msg = confirm(`"${name}" is currently downloading.\n\nClick OK to cancel download & delete.\nClick Cancel to keep downloading.`);
+      if (!msg) return;
       cancelledIds.add(activeDownload.id);
-      await api('/api/download/cancel', { method: 'POST', body: JSON.stringify({ id: activeDownload.id }) });
-      await api('/api/library/delete', { method: 'POST', body: JSON.stringify({ path: itemPath }) });
-      showToast(`Deleted: ${name}`);
-    });
-
-    const keepBtn = document.createElement('button');
-    keepBtn.className = 'btn btn-sm btn-primary';
-    keepBtn.innerHTML = 'Keep Downloading';
-    keepBtn.addEventListener('click', () => {
-      $('deleteModal').classList.remove('open');
-    });
-
-    actions.appendChild(cancelBtn);
-    actions.appendChild(keepBtn);
-  } else {
-    msg.textContent = `Are you sure you want to delete "${name}"?`;
-
-    const confirmBtn = document.createElement('button');
-    confirmBtn.className = 'btn btn-sm';
-    confirmBtn.style.cssText = 'background:var(--red);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px';
-    confirmBtn.innerHTML = '<i class="fas fa-trash"></i> Delete';
-    confirmBtn.addEventListener('click', async () => {
-      $('deleteModal').classList.remove('open');
-      const r = await api('/api/library/delete', { method: 'POST', body: JSON.stringify({ path: itemPath }) });
-      if (r) showToast(`Deleted: ${name}`);
-    });
-
-    const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'btn btn-sm';
-    cancelBtn.style.cssText = 'background:var(--bg3);color:var(--text);border:1px solid var(--border);padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px';
-    cancelBtn.innerHTML = 'Cancel';
-    cancelBtn.addEventListener('click', () => {
-      $('deleteModal').classList.remove('open');
-    });
-
-    actions.appendChild(confirmBtn);
-    actions.appendChild(cancelBtn);
+      api('/api/download/cancel', { method: 'POST', body: JSON.stringify({ id: activeDownload.id }) })
+        .then(() => api('/api/library/delete', { method: 'POST', body: JSON.stringify({ path: itemPath }) }))
+        .then(r => { if (r) showToast(`Deleted: ${name}`); });
+    } else {
+      if (!confirm(`Delete "${name}"?`)) return;
+      api('/api/library/delete', { method: 'POST', body: JSON.stringify({ path: itemPath }) })
+        .then(r => { if (r) showToast(`Deleted: ${name}`); });
+    }
+  } catch (e) {
+    alert('Error: ' + (e.message || e));
   }
-
-  $('deleteModal').classList.add('open');
 }
 
 function countFiles(items) {
