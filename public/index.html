@@ -772,6 +772,20 @@ body {
   </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h2><i class="fas fa-trash" style="color:var(--red)"></i> Delete</h2>
+      <button class="modal-close" id="closeDelete"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <p id="deleteModalMsg" style="font-size:14px;color:var(--text2);margin-bottom:20px;line-height:1.5"></p>
+      <div id="deleteModalActions" style="display:flex;gap:10px;justify-content:flex-end"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -861,6 +875,12 @@ $('helpLetterboxd').addEventListener('click', () => {
 $('closeHelp').addEventListener('click', () => $('helpModal').classList.remove('open'));
 $('helpModal').addEventListener('click', (e) => {
   if (e.target === $('helpModal')) $('helpModal').classList.remove('open');
+});
+
+// Delete confirmation modal
+$('closeDelete').addEventListener('click', () => $('deleteModal').classList.remove('open'));
+$('deleteModal').addEventListener('click', (e) => {
+  if (e.target === $('deleteModal')) $('deleteModal').classList.remove('open');
 });
 
 async function openSettings() {
@@ -1353,9 +1373,66 @@ function renderFileNode(node, parent, path) {
 }
 
 function deleteLibraryItem(itemPath, name) {
-  if (!confirm(`Delete "${name}"?`)) return;
-  api('/api/library/delete', { method: 'POST', body: JSON.stringify({ path: itemPath }) })
-    .then(r => { if (r) showToast(`Deleted: ${name}`); });
+  const topFolder = itemPath.split('/')[0];
+  const activeDownload = state.downloads.find(d => d.status !== 'completed' && (d.name === topFolder || itemPath.startsWith(d.name)));
+  showDeleteConfirm(itemPath, name, activeDownload || null);
+}
+
+function showDeleteConfirm(itemPath, name, activeDownload) {
+  const msg = $('deleteModalMsg');
+  const actions = $('deleteModalActions');
+  actions.innerHTML = '';
+
+  if (activeDownload) {
+    msg.textContent = `"${name}" is currently downloading. What would you like to do?`;
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-sm';
+    cancelBtn.style.cssText = 'background:var(--red);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px';
+    cancelBtn.innerHTML = '<i class="fas fa-times"></i> Cancel Download & Delete';
+    cancelBtn.addEventListener('click', async () => {
+      $('deleteModal').classList.remove('open');
+      cancelledIds.add(activeDownload.id);
+      await api('/api/download/cancel', { method: 'POST', body: JSON.stringify({ id: activeDownload.id }) });
+      await api('/api/library/delete', { method: 'POST', body: JSON.stringify({ path: itemPath }) });
+      showToast(`Deleted: ${name}`);
+    });
+
+    const keepBtn = document.createElement('button');
+    keepBtn.className = 'btn btn-sm btn-primary';
+    keepBtn.innerHTML = 'Keep Downloading';
+    keepBtn.addEventListener('click', () => {
+      $('deleteModal').classList.remove('open');
+    });
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(keepBtn);
+  } else {
+    msg.textContent = `Are you sure you want to delete "${name}"?`;
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'btn btn-sm';
+    confirmBtn.style.cssText = 'background:var(--red);color:#fff;border:none;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px';
+    confirmBtn.innerHTML = '<i class="fas fa-trash"></i> Delete';
+    confirmBtn.addEventListener('click', async () => {
+      $('deleteModal').classList.remove('open');
+      const r = await api('/api/library/delete', { method: 'POST', body: JSON.stringify({ path: itemPath }) });
+      if (r) showToast(`Deleted: ${name}`);
+    });
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-sm';
+    cancelBtn.style.cssText = 'background:var(--bg3);color:var(--text);border:1px solid var(--border);padding:8px 14px;border-radius:6px;cursor:pointer;font-size:13px';
+    cancelBtn.innerHTML = 'Cancel';
+    cancelBtn.addEventListener('click', () => {
+      $('deleteModal').classList.remove('open');
+    });
+
+    actions.appendChild(confirmBtn);
+    actions.appendChild(cancelBtn);
+  }
+
+  $('deleteModal').classList.add('open');
 }
 
 function countFiles(items) {

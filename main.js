@@ -265,6 +265,17 @@ function createTray(appPath) {
     },
     { type: 'separator' },
     {
+      label: 'Open Folder', click: () => {
+        const settings = loadSettings();
+        const defaultDl = app.isPackaged
+          ? path.join(getUserDataPath(), 'downloads')
+          : path.join(appPath, 'downloads');
+        const dlPath = settings.downloadPath || defaultDl;
+        shell.openPath(dlPath);
+      }
+    },
+    { type: 'separator' },
+    {
       label: 'Quit', click: () => {
         isQuitting = true;
         try { tray.destroy(); } catch (_) {}
