@@ -587,6 +587,12 @@ app.get('/api/media/*', (req, res) => {
   }
 });
 
+const pkg = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf-8'));
+
+app.get('/api/version', (_req, res) => {
+  res.json({ version: pkg.version });
+});
+
 app.use((err: any, _req: any, res: any, _next: any) => {
   console.error('Server error:', err);
   res.status(err.status || 500).json({ error: err.message || 'Internal server error' });

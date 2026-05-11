@@ -556,7 +556,7 @@ body {
 <body>
 
 <div class="topbar">
-  <div class="logo"><i class="fas fa-film"></i>Movie DL</div>
+  <div class="logo"><i class="fas fa-film"></i>Movie DL <span id="versionLabel" style="font-size:11px;color:var(--text2);font-weight:400;margin-left:4px"></span></div>
   <div class="mode-toggle" id="modeToggle">
     <span>Auto</span>
     <div class="toggle-track"><div class="toggle-thumb"></div></div>
@@ -1373,8 +1373,9 @@ function renderFileNode(node, parent, path) {
 }
 
 function deleteLibraryItem(itemPath, name) {
-  const topFolder = itemPath.split('/')[0];
-  const activeDownload = state.downloads.find(d => d.status !== 'completed' && (d.name === topFolder || itemPath.startsWith(d.name)));
+  const activeDownload = state.downloads.find(d =>
+    d.status !== 'completed' && (name === d.name || itemPath === d.name || itemPath.startsWith(d.name + '/') || itemPath.startsWith(d.name + '\\'))
+  );
   showDeleteConfirm(itemPath, name, activeDownload || null);
 }
 
@@ -1502,6 +1503,9 @@ async function init() {
   await loadWatchlist();
   pollDownloads();
   state.downloadInterval = setInterval(pollDownloads, 2000);
+  api('/api/version').then(r => {
+    if (r && r.version) $('versionLabel').textContent = 'v' + r.version;
+  });
 }
 
 init();
