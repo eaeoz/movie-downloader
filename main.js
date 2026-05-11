@@ -7,6 +7,7 @@ let tray = null;
 let serverInstance = null;
 let serverReadyResolve = null;
 const serverReady = new Promise(resolve => { serverReadyResolve = resolve; });
+let isQuitting = false;
 
 const PORT = 3555;
 
@@ -140,13 +141,12 @@ function startBackend() {
 }
 
 function killServer() {
+  try {
+    const mod = require('./server');
+    if (mod.cleanup) mod.cleanup();
+  } catch (_) {}
   if (serverInstance) {
-    try {
-      serverInstance.close();
-      // Also destroy WebTorrent client to release UDP ports
-      const { client } = require('./server');
-      if (client && client.destroy) client.destroy(() => {});
-    } catch (_) {}
+    try { serverInstance.close(); } catch (_) {}
     serverInstance = null;
   }
 }
@@ -157,15 +157,22 @@ function createWindow() {
   Menu.setApplicationMenu(null);
   const appPath = getAppPath();
 
-  const iconPath = path.join(appPath, 'data', 'icon.png');
-  const iconExists = fs.existsSync(iconPath);
+  // Set AppUserModelId before creating any window (Windows taskbar icon association)
+  app.setAppUserModelId('com.moviedownloader.app');
+
+  // Prefer .ico on Windows for proper taskbar icon, fall back to .png
+  const icoPath = path.join(appPath, 'data', 'icon.ico');
+  const pngPath = path.join(appPath, 'data', 'icon.png');
+  const icon = process.platform === 'win32' && fs.existsSync(icoPath) ? icoPath
+             : fs.existsSync(pngPath) ? pngPath
+             : undefined;
 
   mainWindow = new BrowserWindow({
     width:           1400,
     height:          900,
     minWidth:        900,
     minHeight:       600,
-    icon:            iconExists ? iconPath : undefined,
+    icon:            icon,
     backgroundColor: '#0f0f0f',
     show:            true,
     frame:           true,
@@ -176,6 +183,16 @@ function createWindow() {
       webSecurity:      true
     }
   });
+
+  // Backup: explicitly set icon via nativeImage for Windows taskbar
+  if (process.platform === 'win32') {
+    const icoNative = icoPath && fs.existsSync(icoPath)
+      ? nativeImage.createFromPath(icoPath)
+      : null;
+    if (icoNative && !icoNative.isEmpty()) {
+      mainWindow.setIcon(icoNative);
+    }
+  }
 
   // Show loading screen immediately
   showLoading('Starting server...');
@@ -207,8 +224,8 @@ function createWindow() {
   });
 
   mainWindow.on('close', e => {
-    // On Windows/Linux, minimize to tray instead of quitting
-    if (tray && process.platform !== 'darwin') {
+    // On Windows/Linux, minimize to tray instead of quitting (unless we're actually quitting)
+    if (!isQuitting && tray && process.platform !== 'darwin') {
       e.preventDefault();
       mainWindow.hide();
     }
@@ -222,11 +239,16 @@ function createWindow() {
 // ── Tray ──────────────────────────────────────────────────────────────────────
 
 function createTray(appPath) {
-  const iconPath = path.join(appPath, 'data', 'icon.png');
+  // Use a larger source image for the tray icon for better quality
+  const icoPath = path.join(appPath, 'data', 'icon.ico');
+  const pngPath = path.join(appPath, 'data', 'icon.png');
+  const traySrc = fs.existsSync(icoPath) ? icoPath
+                : fs.existsSync(pngPath) ? pngPath
+                : null;
   let trayIcon;
 
-  if (fs.existsSync(iconPath)) {
-    trayIcon = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
+  if (traySrc) {
+    trayIcon = nativeImage.createFromPath(traySrc).resize({ width: 16, height: 16 });
   } else {
     trayIcon = nativeImage.createEmpty();
   }
@@ -244,9 +266,17 @@ function createTray(appPath) {
     { type: 'separator' },
     {
       label: 'Quit', click: () => {
-        tray.destroy();
+        isQuitting = true;
+        try { tray.destroy(); } catch (_) {}
+        tray = null;
         killServer();
+        if (mainWindow) {
+          try { mainWindow.destroy(); } catch (_) {}
+          mainWindow = null;
+        }
         app.exit(0);
+        // Force exit fallback (if app.exit doesn't fully terminate on Windows)
+        setTimeout(() => process.exit(0), 3000);
       }
     }
   ]);
@@ -322,7 +352,8 @@ if (!gotLock) {
     if (process.platform === 'darwin') app.quit();
   });
 
-  app.on('before-quit', () => {
+  app.on('before-quit', (e) => {
+    isQuitting = true;
     killServer();
   });
 

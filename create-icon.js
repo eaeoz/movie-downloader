@@ -36,14 +36,16 @@ function createPNG(size) {
       if (d2 < w * 0.13) on = false;
 
       const idx = y * stride + x * 4;
+      // Red background fill
+      raw[idx] = 200;
+      raw[idx + 1] = 35;
+      raw[idx + 2] = 35;
+      raw[idx + 3] = 255;
+      // Draw white gear/sun shape on top
       if (on) {
-        const grad = 0.5 + 0.5 * (1 - dist / (w * 0.5));
-        raw[idx] = Math.round(80 * grad);
-        raw[idx + 1] = Math.round(60 * grad);
-        raw[idx + 2] = Math.round(200 * grad);
-        raw[idx + 3] = 255;
-      } else {
-        raw[idx + 3] = 0;
+        raw[idx] = 255;
+        raw[idx + 1] = 255;
+        raw[idx + 2] = 255;
       }
     }
   }

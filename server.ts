@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { execSync, exec } from 'child_process';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, rmSync } from 'fs';
 import { createReadStream } from 'fs';
 import { join, resolve, extname } from 'path';
 import { tmpdir } from 'os';
@@ -126,6 +126,9 @@ client.on('error', (e: Error) => console.error('[webtorrent] client error:', e.m
 console.log('[server] WebTorrent client created');
 const activeDownloads: Record<string, any> = {};
 const torrentRefs: Record<string, any> = {};
+
+// Track active HTTP connections so we can force-close them on cleanup
+const activeSockets: Set<any> = new Set();
 
 function esc(v: string): string {
   return v.replace(/"/g, '\\"');
@@ -466,10 +469,25 @@ app.post('/api/download/cancel', (req, res) => {
       client.remove(torrent);
     }
   } catch (_) { /* torrent may already be gone */ }
+  // Delete downloaded files from disk
+  try {
+    if (info.path && existsSync(info.path)) {
+      rmSync(info.path, { recursive: true, force: true });
+    }
+  } catch (_) {}
   delete activeDownloads[id];
   delete torrentRefs[id];
   res.json({ ok: true });
 });
+
+function deletePath(targetPath: string): void {
+  const stat = statSync(targetPath);
+  if (stat.isDirectory()) {
+    execSync(`rmdir /s /q "${targetPath}"`, { stdio: 'pipe', timeout: 10000 });
+  } else {
+    execSync(`del /f /q "${targetPath}"`, { stdio: 'pipe', timeout: 10000 });
+  }
+}
 
 app.post('/api/library/delete', (req, res) => {
   const { path: targetPath } = req.body;
@@ -479,15 +497,18 @@ app.post('/api/library/delete', (req, res) => {
   if (!fullPath.startsWith(resolve(dlDir))) return res.status(403).json({ error: 'Forbidden' });
   if (!existsSync(fullPath)) return res.status(404).json({ error: 'Not found' });
   try {
-    const stat = statSync(fullPath);
-    if (stat.isDirectory()) {
-      execSync(`rmdir /s /q "${fullPath}"`, { stdio: 'pipe' });
-    } else {
-      execSync(`del /f /q "${fullPath}"`, { stdio: 'pipe' });
-    }
+    deletePath(fullPath);
     res.json({ ok: true });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    // Retry once after a short delay (file handles may still be held)
+    try {
+      setTimeout(() => {
+        try { deletePath(fullPath); } catch (_) {}
+      }, 2000);
+      res.json({ ok: true, retrying: true });
+    } catch (_) {
+      res.status(500).json({ error: e.message });
+    }
   }
 });
 
@@ -572,5 +593,54 @@ app.use((err: any, _req: any, res: any, _next: any) => {
 });
 
 const server = app.listen(PORT, () => console.log(`Movie Downloader running at http://localhost:${PORT}`));
+server.on('connection', (socket) => {
+  activeSockets.add(socket);
+  socket.on('close', () => activeSockets.delete(socket));
+});
 
-export { app, server, activeDownloads, torrentRefs, client };
+function cleanup(): void {
+  // 1. Destroy all torrents to release file handles
+  const ids = Object.keys(torrentRefs);
+  for (const id of ids) {
+    try {
+      const t = torrentRefs[id];
+      if (t && !t.destroyed) t.destroy();
+    } catch (_) {}
+    delete torrentRefs[id];
+    delete activeDownloads[id];
+  }
+
+  // 2. Force-close all active HTTP connections (media streams, etc.)
+  for (const socket of activeSockets) {
+    try { socket.destroy(); } catch (_) {}
+  }
+  activeSockets.clear();
+
+  // 3. Destroy WebTorrent client (closes DHT, uDP, uTP, tracker connections)
+  try {
+    if (client && !client.destroyed) client.destroy();
+  } catch (_) {}
+
+  // 4. Close Express server
+  try { server.close(); } catch (_) {}
+}
+
+// On startup, try to clean orphaned node.exe processes from tor-dl
+function cleanOrphanedProcesses(): void {
+  try {
+    const me = process.pid;
+    const cmd = `wmic process where "name='node.exe' and processId != ${me}" get processId,commandline /format:csv 2>nul`;
+    const out = execSync(cmd, { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
+    const lines = out.split('\n').filter(l => l.includes('tor-dl'));
+    for (const line of lines) {
+      const parts = line.trim().split(',');
+      const pid = parseInt(parts[parts.length - 1], 10);
+      if (pid && pid !== me) {
+        try { execSync(`taskkill /f /pid ${pid}`, { stdio: 'pipe', timeout: 3000 }); } catch (_) {}
+      }
+    }
+  } catch (_) {}
+}
+cleanOrphanedProcesses();
+
+export { app, server, activeDownloads, torrentRefs, client, cleanup };
