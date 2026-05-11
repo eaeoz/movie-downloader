@@ -1,6 +1,6 @@
 # 🎬 Movie Downloader
 
-Modern torrent downloader with **Letterboxd** watchlist integration — Search, download, and stream movies from a beautiful desktop app.
+Modern torrent downloader with **Letterboxd** watchlist integration — Search and download movies from a beautiful desktop app.
 
 [![Download Setup](https://img.shields.io/badge/Download-Windows%20Setup-blue?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.0/Movie.Downloader.Setup.1.0.0.exe)
 [![Download Portable](https://img.shields.io/badge/Download-Portable%20Version-orange?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.0/Movie.Downloader_portable_1.0.0.exe)
