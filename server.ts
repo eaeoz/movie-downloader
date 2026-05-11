@@ -94,7 +94,7 @@ if (process.env.ELECTRON_USERDATA && existsSync(TOR_DL_PROJECT)) {
 }
 
 const CACHE_FILE = join(tmpdir(), 'tor-dl-cache.json');
-const WATCHLIST_CACHE = join(TOR_DL_PROJECT, '.watchlist-cache.json');
+const WATCHLIST_CACHE = join(TOR_DL_DIR, '.watchlist-cache.json');
 const FILTERS_FILE = join(TOR_DL_DIR, 'filters.json');
 const SOURCES_FILE = join(TOR_DL_DIR, 'sources.json');
 const USERS_FILE = join(TOR_DL_DIR, 'users.json');
@@ -155,7 +155,8 @@ function torExec(args: string): string {
       env: {
         ...process.env,
         ELECTRON_USERDATA: process.env.ELECTRON_USERDATA || '',
-        TOR_DL_PATH: TOR_DL_PROJECT
+        TOR_DL_PATH: TOR_DL_PROJECT,
+        TOR_DL_DATA_DIR: TOR_DL_DIR
       },
       encoding: 'utf-8', timeout: 60000,
       maxBuffer: 10 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe']
