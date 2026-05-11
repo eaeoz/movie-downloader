@@ -323,15 +323,17 @@ const TRACKERS = [
   'udp://open.stealth.si:80/announce',
   'udp://tracker.moeking.me:6969/announce',
   'udp://tracker.tryhackx.org:6969/announce',
+  'udp://tracker.dler.org:6969/announce',
+  'udp://tracker1.bt.moack.co.kr:80/announce',
+  'udp://p4p.arenabg.com:1337/announce',
   'http://tracker.opentrackr.org:1337/announce',
-  'http://open.acgnxtracker.com:80/announce',
   'http://tracker.files.fm:6969/announce',
   'http://tracker.mywaifu.best:6969/announce',
-  'http://tracker.gbitt.info:80/announce',
-  'http://tracker.renfei.net:8080/announce',
   'http://tracker.bt4g.com:2095/announce',
   'http://tracker.tritan.gg:8080/announce',
-  'http://tracker.monitorit4.me:6969/announce'
+  'http://tracker.monitorit4.me:6969/announce',
+  'http://tracker.ipv6tracker.ru:80/announce',
+  'http://tracker.anode.co:80/announce'
 ];
 
 function ensureTrackers(magnet: string): string {
@@ -567,4 +569,6 @@ app.use((err: any, _req: any, res: any, _next: any) => {
   res.status(err.status || 500).json({ error: err.message || 'Internal server error' });
 });
 
-app.listen(PORT, () => console.log(`Movie Downloader running at http://localhost:${PORT}`));
+const server = app.listen(PORT, () => console.log(`Movie Downloader running at http://localhost:${PORT}`));
+
+export { app, server, activeDownloads, torrentRefs, client };
