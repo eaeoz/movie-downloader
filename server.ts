@@ -103,7 +103,7 @@ ensureDownloadsDir();
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(join(__dirname, 'public')));
+app.use(express.static(join(__dirname, 'public'), { setHeaders: (res) => { res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); } }));
 app.use('/downloads', express.static(getDownloadsDir()));
 
 const client = new WebTorrent({

@@ -489,6 +489,46 @@ body {
 .empty-state i { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
 .empty-state p { font-size: 13px; }
 
+/* Animated No Results */
+.no-results {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 56px 20px; text-align: center;
+  animation: nrFadeUp 0.6s ease;
+}
+.no-results .nr-scene {
+  position: relative; width: 80px; height: 80px; margin-bottom: 24px;
+}
+.no-results .nr-reel {
+  width: 80px; height: 80px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-right-color: var(--accent);
+  border-radius: 50%;
+  animation: nrSpin 2s linear infinite;
+}
+.no-results .nr-clapper {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 32px;
+  animation: nrBounce 2s ease-in-out infinite;
+}
+.no-results h3 {
+  font-size: 20px; font-weight: 700;
+  color: var(--text); margin-bottom: 8px;
+  animation: nrFadeIn 0.6s ease 0.15s both;
+}
+.no-results p {
+  font-size: 14px; color: var(--text2); max-width: 260px; line-height: 1.5;
+  animation: nrFadeIn 0.6s ease 0.3s both;
+}
+@keyframes nrSpin { to { transform: rotate(360deg); } }
+@keyframes nrBounce {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -65%) scale(1.1); }
+}
+@keyframes nrFadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes nrFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
 /* Badge */
 .badge {
   display: inline-flex; align-items: center; gap: 4px;
@@ -525,7 +565,7 @@ body {
   <button class="top-btn" id="settingsBtn" title="Settings"><i class="fas fa-cog"></i></button>
   <button class="top-btn" id="openFolderBtn" title="Open Downloads"><i class="fas fa-folder-open"></i></button>
   <button class="top-btn" id="themeBtn" title="Toggle Theme"><i class="fas fa-moon"></i></button>
-  <a href="https://github.com/eaeoz/tor-dl" target="_blank" class="top-btn" title="GitHub"><i class="fab fa-github"></i></a>
+  <a href="https://github.com/eaeoz/movie-downloader" target="_blank" class="top-btn" title="GitHub"><i class="fab fa-github"></i></a>
 </div>
 
 <div class="main">
@@ -1022,7 +1062,7 @@ async function autoSearch(movie) {
   showResults(null, 'Searching for best quality...');
   const data = await api('/api/search', { method: 'POST', body: JSON.stringify({ query }) });
   if (!data || !Array.isArray(data) || data.length === 0) {
-    showResults([], 'No results found');
+    showResults([]);
     return;
   }
   const best = findBestQuality(data);
@@ -1115,19 +1155,29 @@ function showResults(results, loadingMsg) {
     return;
   }
 
-  if (!results || results.length === 0) {
+  if (!Array.isArray(results)) results = [];
+
+  const valid = results.filter(r => {
+    if (!r || !r.name) return false;
+    const name = r.name.trim();
+    if (/no[\s\u00A0]*results?[\s\u00A0]*(returned|found)/i.test(name)) return false;
+    if (r.size === '0 B' && r.seeds === 0 && r.peers === 0 && r.name.length < 30) return false;
+    return true;
+  });
+
+  if (valid.length === 0) {
     area.classList.add('visible');
-    list.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><p>No results found</p></div>';
+    list.innerHTML = '<div class="no-results"><div class="nr-scene"><div class="nr-reel"></div><div class="nr-clapper">🎬</div></div><h3>No Results</h3><p>Try a different search or adjust your filters</p></div>';
     count.textContent = '0 results';
     return;
   }
 
-  state.results = results;
+  state.results = valid;
   area.classList.add('visible');
-  count.textContent = `${results.length} results`;
+  count.textContent = `${valid.length} results`;
   list.innerHTML = '';
 
-  results.forEach(r => {
+  valid.forEach(r => {
     const div = document.createElement('div');
     div.className = 'result-item';
     const seedClass = r.seeds > 100 ? 'high' : r.seeds > 30 ? 'med' : 'low';
