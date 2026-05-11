@@ -1057,12 +1057,9 @@ function selectMovie(movie) {
   selectTrigger.querySelector('.placeholder').textContent = movie.name + (movie.year ? ` (${movie.year})` : '');
   selectTrigger.querySelector('.placeholder').style.color = 'var(--text)';
   movieSelect.classList.remove('open');
-  if (state.mode === 'auto') {
-    autoSearch(movie);
-  } else {
-    $('manualSearchInput').value = movie.name + (movie.year ? ` ${movie.year}` : '');
-    manualSearch();
-  }
+  const query = movie.name + (movie.year ? ` ${movie.year}` : '');
+  $('manualSearchInput').value = query;
+  manualSearch();
 }
 
 // Dropdown
@@ -1332,22 +1329,15 @@ function renderFileNode(node, parent, path) {
     const folderPath = path ? path + '/' + node.name : node.name;
     const row = document.createElement('div');
     row.className = 'folder-row';
-    row.innerHTML = `<i class="fas fa-folder"></i>${node.name} <span style="color:var(--text2);font-size:11px;margin-left:auto">${node.children ? node.children.length : 0} items</span> <button class="btn-del-lib" title="Delete" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;padding:2px 4px;border-radius:3px;opacity:0.6"><i class="fas fa-trash"></i></button>`;
+    row.innerHTML = `<i class="fas fa-folder"></i>${node.name} <span style="color:var(--text2);font-size:11px;margin-left:auto">${node.children ? node.children.length : 0} items</span>`;
     const container = document.createElement('div');
     container.className = 'children';
     if (node.children) {
       node.children.forEach(c => renderFileNode(c, container, folderPath));
     }
     row.addEventListener('click', (e) => {
-      if (!e.target.closest('.btn-del-lib')) container.classList.toggle('open');
+      container.classList.toggle('open');
     });
-    const delBtn = row.querySelector('.btn-del-lib');
-    if (delBtn) {
-      delBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        deleteLibraryItem(node.path || folderPath, node.name);
-      });
-    }
     parent.appendChild(row);
     parent.appendChild(container);
   } else {
@@ -1355,17 +1345,10 @@ function renderFileNode(node, parent, path) {
     const row = document.createElement('div');
     row.className = 'file-row';
     const icon = node.isMedia ? 'fa-file-video' : 'fa-file';
-    row.innerHTML = `<i class="fas ${icon}"></i>${node.name} <span style="color:var(--text2);font-size:11px;margin-left:auto">${formatBytes(node.size)}</span> <button class="btn-del-lib" title="Delete" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;padding:2px 4px;border-radius:3px;opacity:0.6"><i class="fas fa-trash"></i></button>`;
+    row.innerHTML = `<i class="fas ${icon}"></i>${node.name} <span style="color:var(--text2);font-size:11px;margin-left:auto">${formatBytes(node.size)}</span>`;
     if (node.isMedia) {
       row.addEventListener('click', (e) => {
-        if (!e.target.closest('.btn-del-lib')) playMedia(relPath, node.name);
-      });
-    }
-    const delBtn = row.querySelector('.btn-del-lib');
-    if (delBtn) {
-      delBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        deleteLibraryItem(node.path || relPath, node.name);
+        playMedia(relPath, node.name);
       });
     }
     parent.appendChild(row);
