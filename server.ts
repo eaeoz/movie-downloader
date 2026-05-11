@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { execSync, exec } from 'child_process';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'fs';
 import { createReadStream } from 'fs';
 import { join, resolve, extname } from 'path';
 import { tmpdir } from 'os';
@@ -94,7 +94,7 @@ if (process.env.ELECTRON_USERDATA && existsSync(TOR_DL_PROJECT)) {
 }
 
 const CACHE_FILE = join(tmpdir(), 'tor-dl-cache.json');
-const WATCHLIST_CACHE = join(TOR_DL_DIR, '.watchlist-cache.json');
+const WATCHLIST_CACHE = join(TOR_DL_PROJECT, '.watchlist-cache.json');
 const FILTERS_FILE = join(TOR_DL_DIR, 'filters.json');
 const SOURCES_FILE = join(TOR_DL_DIR, 'sources.json');
 const USERS_FILE = join(TOR_DL_DIR, 'users.json');
@@ -308,7 +308,9 @@ app.post('/api/user', (req, res) => {
     const { username } = req.body;
     const data = { letterboxd: { username } };
     writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
+    try { if (existsSync(WATCHLIST_CACHE)) unlinkSync(WATCHLIST_CACHE); } catch (_) {}
     try { torExec(`setuser "${username}"`); } catch (_) {}
+    try { torExec('list'); } catch (_) {}
     res.json({ ok: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });

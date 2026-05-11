@@ -787,6 +787,7 @@ const state = {
   sources: {},
   filters: {},
   username: '',
+  watchlistError: false,
   movieSelectOpen: false,
   selectedMovie: null,
   downloadInterval: null,
@@ -922,11 +923,9 @@ async function loadFilters() {
 
 $('saveSettings').addEventListener('click', async () => {
   const username = $('usernameInput').value.trim();
-  if (username) {
-    const userRes = await api('/api/user', { method: 'POST', body: JSON.stringify({ username }) });
-    if (userRes && !userRes.error) {
-      state.username = username;
-    }
+  const userRes = await api('/api/user', { method: 'POST', body: JSON.stringify({ username }) });
+  if (userRes && !userRes.error) {
+    state.username = username;
   }
 
   const sources = state.sources;
@@ -983,14 +982,24 @@ async function loadWatchlist() {
   const data = await api('/api/watchlist');
   if (data) {
     state.watchlist = Array.isArray(data) ? data : [];
-    renderWatchlist();
+    state.watchlistError = false;
+  } else {
+    state.watchlist = [];
+    state.watchlistError = true;
   }
+  renderWatchlist();
 }
 
 function renderWatchlist() {
   optionsContainer.innerHTML = '';
   if (state.watchlist.length === 0) {
-    optionsContainer.innerHTML = '<div class="no-results">No watchlist. Set username in Settings.</div>';
+    if (state.watchlistError) {
+      optionsContainer.innerHTML = '<div class="no-results">Failed to load watchlist. Click refresh <i class="fas fa-sync-alt"></i> to try again.</div>';
+    } else if (!state.username) {
+      optionsContainer.innerHTML = '<div class="no-results">Set your Letterboxd username in Settings <i class="fas fa-cog"></i></div>';
+    } else {
+      optionsContainer.innerHTML = '<div class="no-results">Watchlist is empty</div>';
+    }
     return;
   }
   state.watchlist.forEach(movie => {
