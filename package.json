@@ -50,7 +50,6 @@
       }
     ],
     "asar": false,
-    "forceCodeSigning": false,
     "win": {
       "icon": "data/icon.ico",
       "signAndEditExecutable": false,
