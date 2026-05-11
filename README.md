@@ -148,10 +148,10 @@ When minimized, the app lives in your system tray:
 
 ### 7. Settings
 
-**Letterboxd** | Set your Letterboxd username for watchlist sync 
-**Enabled Sources** | Toggle search sources on/off (YTS, ThePirateBay, RARBG, TorrentsCSV) 
-**Filters** | Min/max size, min/max seeders, sort by, category, result limit, quality filter, search append
-**Download Location** | Custom download directory via folder picker
+- **Letterboxd** | Set your Letterboxd username for watchlist sync 
+- **Enabled Sources** | Toggle search sources on/off (YTS, ThePirateBay, RARBG, TorrentsCSV) 
+- **Filters** | Min/max size, min/max seeders, sort by, category, result limit, quality filter, search append
+- **Download Location** | Custom download directory via folder picker
 
 ---
 
