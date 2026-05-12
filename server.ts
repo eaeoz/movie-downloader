@@ -428,7 +428,7 @@ app.post('/api/download', (req, res) => {
   });
 
   torrent.on('download', () => {
-    console.log('[download] Event: download, progress:', torrent.progress);
+    // console.log('[download] Event: download, progress:', torrent.progress);
     if (info.status === 'starting') {
       info.status = 'downloading';
       clearTimeout(readyTimeout);
