@@ -1417,7 +1417,7 @@ function playMedia(relPath, name) {
   const video = $('videoPlayer');
   const title = $('playerTitle');
   player.classList.add('visible');
-  title.textContent = `<i class="fas fa-play" style="color:var(--accent);margin-right:6px"></i>${name}`;
+  title.innerHTML = `<i class="fas fa-play" style="color:var(--accent);margin-right:6px"></i>${name}`;
   video.src = '/api/media/' + relPath.replace(/\\/g, '/');
   video.load();
   video.play();
