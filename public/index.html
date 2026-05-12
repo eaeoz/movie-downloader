@@ -814,7 +814,8 @@ const state = {
   movieSelectOpen: false,
   selectedMovie: null,
   downloadInterval: null,
-  filesInterval: null
+  filesInterval: null,
+  openFolders: new Set()
 };
 
 // DOM refs
@@ -1361,7 +1362,15 @@ function renderFileNode(node, parent, path) {
     }
     row.addEventListener('click', (e) => {
       container.classList.toggle('open');
+      if (container.classList.contains('open')) {
+        state.openFolders.add(folderPath);
+      } else {
+        state.openFolders.delete(folderPath);
+      }
     });
+    if (state.openFolders.has(folderPath)) {
+      container.classList.add('open');
+    }
     parent.appendChild(row);
     parent.appendChild(container);
   } else {
