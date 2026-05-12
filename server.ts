@@ -333,11 +333,24 @@ app.post('/api/settings', (req, res) => {
   }
 });
 
+const FILTERS_VERSION = 1;
+
+function getDefaultFilters() {
+  return { category: 'all', minSeeds: 5, maxSeeds: 0, minSize: '700MB', maxSize: '4GB', sortBy: 'seeds', order: 'desc', limit: 70, sources: '', qualityFilter: '1080p', searchAppend: '' };
+}
+
 function loadFilters(): any {
   if (existsSync(FILTERS_FILE)) {
-    return JSON.parse(readFileSync(FILTERS_FILE, 'utf-8'));
+    const saved = JSON.parse(readFileSync(FILTERS_FILE, 'utf-8'));
+    if (saved._version !== FILTERS_VERSION) {
+      const defaults = getDefaultFilters();
+      const merged = { ...saved, ...defaults, _version: FILTERS_VERSION };
+      writeFileSync(FILTERS_FILE, JSON.stringify(merged, null, 2));
+      return merged;
+    }
+    return saved;
   }
-  return { category: 'all', minSeeds: 5, maxSeeds: 0, minSize: '700MB', maxSize: '4GB', sortBy: 'seeds', order: 'desc', limit: 70, sources: '', qualityFilter: '1080p', searchAppend: '' };
+  return { ...getDefaultFilters(), _version: FILTERS_VERSION };
 }
 
 app.get('/api/filters', (_req, res) => res.json(loadFilters()));

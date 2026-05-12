@@ -941,7 +941,7 @@ async function loadFilters() {
   state.filters = data;
   $('minSize').value = data.minSize || '';
   $('maxSize').value = data.maxSize || '';
-  $('minSeeds').value = data.minSeeds || 0;
+  $('minSeeds').value = data.minSeeds || 5;
   $('maxSeeds').value = data.maxSeeds || 0;
   $('sortBy').value = data.sortBy || 'seeds';
   $('order').value = data.order || 'desc';
@@ -969,9 +969,9 @@ $('saveSettings').addEventListener('click', async () => {
   await api('/api/sources', { method: 'POST', body: JSON.stringify({ sources: updates }) });
 
   const filters = {
-    minSize: $('minSize').value || '0',
-    maxSize: $('maxSize').value || '50GB',
-    minSeeds: parseInt($('minSeeds').value) || 0,
+    minSize: $('minSize').value || '700MB',
+    maxSize: $('maxSize').value || '4GB',
+    minSeeds: parseInt($('minSeeds').value) || 5,
     maxSeeds: parseInt($('maxSeeds').value) || 0,
     sortBy: $('sortBy').value,
     order: $('order').value,
