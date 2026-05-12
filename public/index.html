@@ -1213,7 +1213,7 @@ function showResults(results, loadingMsg) {
       <div class="r-size">${size}</div>
       <div class="r-seeds ${seedClass}" title="Seeders"><i class="fas fa-arrow-up"></i> ${r.seeds}</div>
       <div class="r-leech" title="Leechers"><i class="fas fa-arrow-down"></i> ${r.peers || 0}</div>
-      <div class="r-source">${r.source || 'unknown'}</div>
+      <div class="r-source" style="cursor:pointer" title="${r.page || r.magnet ? 'Open source page' : ''}">${r.source || 'unknown'}</div>
       <div class="r-actions">
         <button class="btn-dl" title="Download"><i class="fas fa-download"></i></button>
         <button class="btn-copy" title="Copy magnet"><i class="fas fa-link"></i></button>
@@ -1243,6 +1243,12 @@ function showResults(results, loadingMsg) {
       if (!r.magnet) return showToast('No magnet link', 'error');
       api('/api/open-magnet', { method: 'POST', body: JSON.stringify({ magnet: r.magnet }) })
         .then(() => showToast('Opened in external app'));
+    });
+    div.querySelector('.r-source').addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (r.page) window.open(r.page, '_blank');
+      else if (r.magnet) api('/api/open-magnet', { method: 'POST', body: JSON.stringify({ magnet: r.magnet }) }).then(() => showToast('Opened in external app'));
+      else showToast('No source page available', 'error');
     });
     list.appendChild(div);
   });
@@ -1282,7 +1288,7 @@ function renderDownloads() {
     const totalSizeStr = formatBytes(totalSize);
     div.innerHTML = `
       <div class="d-header">
-        <span class="d-name">${d.name}</span>
+        <span class="d-name" title="${d.magnet ? 'Open magnet in external app' : ''}" style="${d.magnet ? 'cursor:pointer' : ''}">${d.name}</span>
         <span class="d-status ${d.status}">${d.status}</span>
       </div>
       <div class="d-progress"><div class="bar" style="width:${pct}%"></div></div>
@@ -1297,6 +1303,13 @@ function renderDownloads() {
         <button class="btn-cancel-dl" data-id="${d.id}" title="Cancel download" style="margin-left:auto;background:none;border:none;color:var(--red);cursor:pointer;font-size:13px;padding:2px 6px;border-radius:4px"><i class="fas fa-times"></i></button>
       </div>
     `;
+    const nameEl = div.querySelector('.d-name');
+    if (nameEl && d.magnet) {
+      nameEl.addEventListener('click', () => {
+        api('/api/open-magnet', { method: 'POST', body: JSON.stringify({ magnet: d.magnet }) })
+          .then(() => showToast('Opened in external app'));
+      });
+    }
     const cancelBtn = div.querySelector('.btn-cancel-dl');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', () => {
