@@ -337,7 +337,7 @@ function loadFilters(): any {
   if (existsSync(FILTERS_FILE)) {
     return JSON.parse(readFileSync(FILTERS_FILE, 'utf-8'));
   }
-  return { category: 'all', minSeeds: 0, maxSeeds: 0, minSize: '0', maxSize: '50GB', sortBy: 'seeds', order: 'desc', limit: 70, sources: '', qualityFilter: '1080p', searchAppend: '' };
+  return { category: 'all', minSeeds: 5, maxSeeds: 0, minSize: '700MB', maxSize: '4GB', sortBy: 'seeds', order: 'desc', limit: 70, sources: '', qualityFilter: '1080p', searchAppend: '' };
 }
 
 app.get('/api/filters', (_req, res) => res.json(loadFilters()));
