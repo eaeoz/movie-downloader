@@ -355,7 +355,7 @@ app.post('/api/download', (req, res) => {
   const fullMagnet = ensureTrackers(magnet);
   console.log('[download] fullMagnet:', fullMagnet.slice(0, 200) + '...');
   const movieName = name || `movie-${Date.now()}`;
-  const safeName = movieName.replace(/[<>:"/\\|?*]/g, '_').slice(0, 100);
+  const safeName = movieName.replace(/[<>:"/\\|?*]/g, '_').trim().slice(0, 100);
   const savePath = join(getDownloadsDir(), safeName);
   if (!existsSync(savePath)) mkdirSync(savePath, { recursive: true });
 

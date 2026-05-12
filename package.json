@@ -1,6 +1,6 @@
 {
   "name": "movie-downloader",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Modern torrent downloader with Letterboxd integration",
   "main": "main.js",
   "author": {
@@ -36,17 +36,24 @@
       {
         "from": "../tor-dl/dist",
         "to": "tor-dl/dist",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "../tor-dl/node_modules",
         "to": "tor-dl/node_modules",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "../tor-dl",
         "to": "tor-dl",
-        "filter": ["*.json", "sources.json"]
+        "filter": [
+          "*.json",
+          "sources.json"
+        ]
       }
     ],
     "asar": false,
