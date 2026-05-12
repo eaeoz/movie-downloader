@@ -719,6 +719,15 @@ body {
       </div>
     </div>
 
+    <div class="settings-section" style="border-top:1px solid var(--border);padding-top:16px">
+      <h4><i class="fas fa-trash-alt" style="margin-right:6px;color:var(--red)"></i>Cancel Behavior</h4>
+      <label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer;padding:8px 12px;border-radius:8px;border:1px solid var(--border)">
+        <input type="checkbox" id="keepIncompleteData">
+        <span>Keep incomplete data when cancelling a download</span>
+      </label>
+      <p style="font-size:11px;color:var(--text2);margin-top:6px;padding-left:4px">When unchecked, cancelling a download deletes its partial files. Completed downloads are always moved to the main folder.</p>
+    </div>
+
     <div class="filter-actions">
       <button class="btn btn-primary" id="saveSettings"><i class="fas fa-check"></i>Save Settings</button>
     </div>
@@ -892,6 +901,7 @@ async function loadDownloadSettings() {
   const data = await api('/api/settings');
   if (data) {
     $('downloadPath').value = data.downloadPath || '';
+    $('keepIncompleteData').checked = data.keepIncompleteData === true;
   }
 }
 
@@ -973,9 +983,10 @@ $('saveSettings').addEventListener('click', async () => {
   await api('/api/filters', { method: 'POST', body: JSON.stringify(filters) });
   state.filters = filters;
   const dlPath = $('downloadPath').value;
-  if (dlPath) {
-    await api('/api/settings', { method: 'POST', body: JSON.stringify({ downloadPath: dlPath }) });
-  }
+  const settingsPayload = {};
+  if (dlPath) settingsPayload.downloadPath = dlPath;
+  settingsPayload.keepIncompleteData = $('keepIncompleteData').checked;
+  await api('/api/settings', { method: 'POST', body: JSON.stringify(settingsPayload) });
   showToast('Settings saved');
   $('settingsModal').classList.remove('open');
   loadWatchlist();

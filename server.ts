@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import { execSync, exec } from 'child_process';
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, rmSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, renameSync, rmSync } from 'fs';
 import { createReadStream } from 'fs';
 import { join, resolve, extname } from 'path';
 import { tmpdir } from 'os';
@@ -27,6 +27,29 @@ function getDownloadsDir(): string {
 function ensureDownloadsDir(): void {
   const d = getDownloadsDir();
   if (!existsSync(d)) mkdirSync(d, { recursive: true });
+}
+
+function getIncompleteDir(): string {
+  const d = join(getDownloadsDir(), '_incomplete');
+  if (!existsSync(d)) mkdirSync(d, { recursive: true });
+  return d;
+}
+
+function moveToDownloads(info: any): void {
+  const dlDir = getDownloadsDir();
+  const src = info.path;
+  if (!existsSync(src)) return;
+  let target = join(dlDir, info.name);
+  if (existsSync(target)) {
+    target = join(dlDir, `${info.name}_${Date.now()}`);
+  }
+  try {
+    renameSync(src, target);
+    info.path = target;
+    console.log(`[move] Moved completed download to: ${target}`);
+  } catch (e: any) {
+    console.error(`[move] Failed to move completed download: ${e.message}`);
+  }
 }
 
 function loadSettingsFile(): any {
@@ -287,15 +310,19 @@ app.get('/api/settings', (_req, res) => {
 
 app.post('/api/settings', (req, res) => {
   try {
-    const { downloadPath } = req.body;
-    if (downloadPath) {
+    const { downloadPath, keepIncompleteData } = req.body;
+    const toSave: any = {};
+    if (downloadPath !== undefined) {
       if (!existsSync(downloadPath)) mkdirSync(downloadPath, { recursive: true });
-      saveSettingsFile({ downloadPath });
-      const downloadsDir = getDownloadsDir();
-      res.json({ ok: true, downloadPath });
-    } else {
-      res.status(400).json({ error: 'downloadPath required' });
+      toSave.downloadPath = downloadPath;
     }
+    if (keepIncompleteData !== undefined) {
+      toSave.keepIncompleteData = keepIncompleteData;
+    }
+    if (Object.keys(toSave).length > 0) {
+      saveSettingsFile(toSave);
+    }
+    res.json({ ok: true, ...toSave });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
@@ -416,6 +443,7 @@ function setupTorrentEvents(torrent: any, info: any, savePath: string, readyTime
     console.log('[download] Event: done, infoHash:', torrent.infoHash);
     info.status = 'completed'; info.progress = 1; info.length = torrent.length;
     removeFromDownloadsState(info.id);
+    moveToDownloads(info);
   });
 
   torrent.on('error', (err: Error) => {
@@ -445,7 +473,7 @@ app.post('/api/download', (req, res) => {
   console.log('[download] fullMagnet:', fullMagnet.slice(0, 200) + '...');
   const movieName = name || `movie-${Date.now()}`;
   const safeName = movieName.replace(/[<>:"/\\|?*]/g, '_').trim().slice(0, 100);
-  const savePath = join(getDownloadsDir(), safeName);
+  const savePath = join(getIncompleteDir(), safeName);
   if (!existsSync(savePath)) mkdirSync(savePath, { recursive: true });
 
   // Destroy any existing torrent for this magnet before re-adding
@@ -506,12 +534,15 @@ app.post('/api/download/cancel', (req, res) => {
       client.remove(torrent);
     }
   } catch (_) { /* torrent may already be gone */ }
-  // Delete downloaded files from disk
-  try {
-    if (info.path && existsSync(info.path)) {
-      rmSync(info.path, { recursive: true, force: true });
-    }
-  } catch (_) {}
+  // Delete downloaded files from disk (unless keepIncompleteData is set)
+  const settings = loadSettingsFile();
+  if (!settings.keepIncompleteData) {
+    try {
+      if (info.path && existsSync(info.path)) {
+        deletePath(info.path);
+      }
+    } catch (_) {}
+  }
   delete activeDownloads[id];
   delete torrentRefs[id];
   removeFromDownloadsState(id);
@@ -557,7 +588,7 @@ app.get('/api/downloads', (_req, res) => {
 function getDownloadedFiles(dir = getDownloadsDir()): any[] {
   if (!existsSync(dir)) return [];
   try {
-    return readdirSync(dir).map(entry => {
+    return readdirSync(dir).filter(entry => entry !== '_incomplete').map(entry => {
       const full = join(dir, entry);
       const stat = statSync(full);
       if (stat.isDirectory()) {
@@ -647,8 +678,23 @@ server.on('connection', (socket) => {
 
 function resumeDownloads(): void {
   const state = loadDownloadsState();
+  if (state.length > 0) {
+    console.log(`[resume] Found ${state.length} saved download(s), attempting to resume incomplete ones`);
+  }
+  // Also scan _incomplete for orphaned folders not in state
+  const incompleteDir = getIncompleteDir();
+  if (existsSync(incompleteDir)) {
+    const orphaned = readdirSync(incompleteDir).filter(e =>
+      statSync(join(incompleteDir, e)).isDirectory() && !state.find((s: any) => s.name === e)
+    );
+    if (orphaned.length > 0) {
+      console.log(`[resume] Found ${orphaned.length} orphaned folder(s) in _incomplete, cleaning up`);
+      for (const folder of orphaned) {
+        try { rmSync(join(incompleteDir, folder), { recursive: true, force: true }); } catch (_) {}
+      }
+    }
+  }
   if (state.length === 0) return;
-  console.log(`[resume] Found ${state.length} saved download(s), attempting to resume incomplete ones`);
   for (const entry of state) {
     if (entry.status === 'completed') continue;
     if (!existsSync(entry.path)) {
