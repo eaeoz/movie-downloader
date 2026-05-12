@@ -2,8 +2,8 @@
 
 Modern torrent downloader with **Letterboxd** watchlist integration — Search and download movies from a beautiful desktop app.
 
-[![Download Setup](https://img.shields.io/badge/Download-Windows%20Setup-blue?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.2/Movie.Downloader.Setup.1.0.2.exe)
-[![Download Portable](https://img.shields.io/badge/Download-Portable%20Version-orange?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.2/Movie.Downloader_portable_1.0.2.exe)
+[![Download Setup](https://img.shields.io/badge/Download-Windows%20Setup-blue?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.3/Movie.Downloader.Setup.1.0.3.exe)
+[![Download Portable](https://img.shields.io/badge/Download-Portable%20Version-orange?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.3/Movie.Downloader_portable_1.0.3.exe)
 [![GitHub](https://img.shields.io/badge/Source-GitHub-black?style=for-the-badge&logo=github)](https://github.com/eaeoz/movie-downloader)
 
 > **Author:** Sedat ERGOZ — [eaeoz](https://github.com/eaeoz) — sedatergoz@gmail.com
@@ -49,9 +49,11 @@ Movie Downloader bridges your Letterboxd watchlist with torrent search engines t
 
 ### 📊 Download Management
 - Real-time progress bars with speed, ETA, and seeds/peers tracking
-- Cancel active downloads anytime
+- Cancel active downloads anytime (optionally keep incomplete data via setting)
 - Download status indicators (starting, downloading, completed, error, stalled)
-- Persistent download list across app restarts
+- **Persistent download list across app restarts** — Incomplete downloads auto-resume
+- **Incomplete folder system** — Downloads go to `_incomplete/`, moved to main folder on completion
+- **Orphan cleanup** — Stale incomplete folders from crashed sessions cleaned on startup
 
 ### 🗂️ Library Browser
 - Folder tree view of all downloaded files
@@ -70,7 +72,7 @@ Movie Downloader bridges your Letterboxd watchlist with torrent search engines t
 
 ### Option 1: Windows Installer (Recommended)
 
-[![Download Setup](https://img.shields.io/badge/Download-Movie.Downloader.Setup.1.0.2.exe-blue?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.2/Movie.Downloader.Setup.1.0.2.exe)
+[![Download Setup](https://img.shields.io/badge/Download-Movie.Downloader.Setup.1.0.3.exe-blue?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.3/Movie.Downloader.Setup.1.0.3.exe)
 
 - Double-click the installer and follow the wizard
 - Desktop and Start Menu shortcuts created automatically
@@ -78,7 +80,7 @@ Movie Downloader bridges your Letterboxd watchlist with torrent search engines t
 
 ### Option 2: Portable Version
 
-[![Download Portable](https://img.shields.io/badge/Download-Movie.Downloader_portable_1.0.2.exe-orange?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.2/Movie.Downloader_portable_1.0.2.exe)
+[![Download Portable](https://img.shields.io/badge/Download-Movie.Downloader_portable_1.0.3.exe-orange?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.3/Movie.Downloader_portable_1.0.3.exe)
 
 - No installation required — just run the executable
 - No admin rights needed
@@ -143,6 +145,7 @@ When minimized, the app lives in your system tray:
 - **Enabled Sources** | Toggle search sources on/off (YTS, ThePirateBay, RARBG, TorrentsCSV) 
 - **Filters** | Min/max size, min/max seeders, sort by, category, result limit, quality filter, search append
 - **Download Location** | Custom download directory via folder picker
+- **Cancel Behavior** | Toggle whether to keep or delete incomplete data when cancelling a download
 
 ---
 
@@ -188,6 +191,19 @@ Outputs are placed in the `dist/` directory.
 ---
 
 ## 📋 Changelog
+
+### v1.0.3 (2026-05-12)
+
+- **Added:** Download persistence across restarts — active downloads are saved to disk, incomplete downloads auto-resume on next launch
+- **Added:** Incomplete folder system — downloads go to `_incomplete/` subfolder, moved to main downloads directory on completion, hidden from Library view
+- **Added:** Orphan cleanup — stale `_incomplete` folders from crashed sessions are cleaned up on startup
+- **Added:** Cancel Behavior setting — toggle to keep or delete incomplete data when cancelling a download
+- **Added:** Source badge click — click the source label (YTS, RARBG, etc.) in search results to open the source page
+- **Added:** Download name click — click a download item's name to open its magnet in external app
+- **Fixed:** Windows file handle locking — completed downloads now properly release WebTorrent handles before moving files (solves `EPERM: operation not permitted`)
+- **Fixed:** Re-download support — downloading an already-completed item now works instead of being silently blocked by stale state
+- **Fixed:** Tracker reliability — removed dead trackers, improved DHT bootstrap nodes
+- **Fixed:** Empty folder leftover on cancel — cancelled downloads now properly delete the folder via shell command
 
 ### v1.0.2 (2026-05-12)
 

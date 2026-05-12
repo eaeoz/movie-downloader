@@ -1,6 +1,6 @@
 {
   "name": "movie-downloader",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Modern torrent downloader with Letterboxd integration",
   "main": "main.js",
   "author": {
