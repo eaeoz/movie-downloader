@@ -28,8 +28,7 @@ Movie Downloader bridges your Letterboxd watchlist with torrent search engines t
 - 🎬 **Letterboxd Sync** — Load your personal watchlist with one click
 - 🔍 **Multi-Source Search** — Searches YTS, ThePirateBay, RARBG, TorrentsCSV
 - 📥 **Smart Downloads** — Auto or Manual mode for finding the best quality
-- ▶️ **Built-in Player** — Stream downloaded movies directly in the app
-- 🗂️ **Library Browser** — Browse and play downloaded files organized by folder
+- 🗂️ **Library Browser** — Browse downloaded files organized by folder
 - 🌓 **Dark & Light Theme** — Toggle between themes with persistent preference
 
 ---
@@ -54,16 +53,9 @@ Movie Downloader bridges your Letterboxd watchlist with torrent search engines t
 - Download status indicators (starting, downloading, completed, error, stalled)
 - Persistent download list across app restarts
 
-### 🎮 Built-in Media Player
-- Play downloaded video files directly in the app
-- Supports common video formats
-- Clean player UI with close button
-
 ### 🗂️ Library Browser
 - Folder tree view of all downloaded files
-- Click to play media files instantly
 - Organized by download folder structure
-- File size display for each item
 
 ### 🎨 User Experience
 - **Dark/Light Theme** — Toggle with one click, persists across sessions
@@ -134,7 +126,6 @@ Toggle between **Auto** and **Manual** mode in the top bar:
 - In **Manual mode**, click the download button (↓) next to any result
 - Monitor progress in the **Downloads** panel on the right
 - Cancel any active download with the cancel button
-- Click any completed download or library file to play in the built-in media player
 - Browse your **Library** tree to find all downloaded files organized by folder
 - Click the **Open Folder** button (📂) in the top bar to open the download directory in Explorer
 
