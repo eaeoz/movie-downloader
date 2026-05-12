@@ -35,7 +35,7 @@ function getIncompleteDir(): string {
   return d;
 }
 
-function moveToDownloads(info: any): void {
+function moveToDownloads(info: any, attempt: number = 1): void {
   const dlDir = getDownloadsDir();
   const src = info.path;
   if (!existsSync(src)) return;
@@ -45,10 +45,15 @@ function moveToDownloads(info: any): void {
   }
   try {
     renameSync(src, target);
-    info.path = target;
     console.log(`[move] Moved completed download to: ${target}`);
+    delete activeDownloads[info.id];
   } catch (e: any) {
-    console.error(`[move] Failed to move completed download: ${e.message}`);
+    if (attempt < 5) {
+      console.log(`[move] Retry ${attempt}/5 for "${info.name}": ${e.message}`);
+      setTimeout(() => moveToDownloads(info, attempt + 1), 3000 * attempt);
+    } else {
+      console.error(`[move] Failed to move "${info.name}" after 5 attempts: ${e.message}`);
+    }
   }
 }
 
@@ -386,7 +391,6 @@ const TRACKERS = [
   'udp://p4p.arenabg.com:1337/announce',
   'udp://movies.zsw.ca:6969/announce',
   'udp://uploads.gamecoast.net:6969/announce',
-  'https://tracker.nucasis.org:443/announce',
   'http://tracker.opentrackr.org:1337/announce',
   'http://tracker.files.fm:6969/announce',
   'http://tracker.bt4g.com:2095/announce',
@@ -400,6 +404,16 @@ function ensureTrackers(magnet: string): string {
   return base + TRACKERS.map(t => '&tr=' + encodeURIComponent(t)).join('');
 }
 
+function completeDownload(torrent: any, info: any): void {
+  info.status = 'completed';
+  removeFromDownloadsState(info.id);
+  try {
+    if (torrent && !torrent.destroyed) client.remove(torrent);
+  } catch (_) {}
+  delete torrentRefs[info.id];
+  setTimeout(() => moveToDownloads(info), 3000);
+}
+
 function setupTorrentEvents(torrent: any, info: any, savePath: string, readyTimeout: NodeJS.Timeout): void {
   if (torrent.ready) {
     clearTimeout(readyTimeout);
@@ -411,7 +425,7 @@ function setupTorrentEvents(torrent: any, info: any, savePath: string, readyTime
     info.files = (torrent.files || []).map((f: any) => ({ name: f.name, path: f.path, length: f.length }));
     if (torrent.progress === 1 && torrent.length > 0) {
       const allExist = (torrent.files || []).every((f: any) => existsSync(join(savePath, f.path)));
-      if (allExist) info.status = 'completed';
+      if (allExist) completeDownload(torrent, info);
     }
   }
 
@@ -423,7 +437,7 @@ function setupTorrentEvents(torrent: any, info: any, savePath: string, readyTime
     info.files = (torrent.files || []).map((f: any) => ({ name: f.name, path: f.path, length: f.length }));
     if (torrent.progress === 1 && torrent.length > 0) {
       const allExist = (torrent.files || []).every((f: any) => existsSync(join(savePath, f.path)));
-      if (allExist) info.status = 'completed';
+      if (allExist) { completeDownload(torrent, info); return; }
     }
     addToDownloadsState(info);
   });
@@ -441,9 +455,8 @@ function setupTorrentEvents(torrent: any, info: any, savePath: string, readyTime
 
   torrent.on('done', () => {
     console.log('[download] Event: done, infoHash:', torrent.infoHash);
-    info.status = 'completed'; info.progress = 1; info.length = torrent.length;
-    removeFromDownloadsState(info.id);
-    moveToDownloads(info);
+    info.progress = 1; info.length = torrent.length;
+    completeDownload(torrent, info);
   });
 
   torrent.on('error', (err: Error) => {
@@ -505,7 +518,7 @@ app.post('/api/download', (req, res) => {
     timeRemaining: 0, status: 'starting', files: [], magnet: fullMagnet,
     error: '', seeds: seeds || 0, peers: peers || 0
   };
-  if (activeDownloads[id]) {
+  if (activeDownloads[id] && activeDownloads[id].status !== 'completed') {
     return res.json({ id, name: safeName, exists: true });
   }
   activeDownloads[id] = info;
