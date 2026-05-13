@@ -218,10 +218,13 @@ Outputs are placed in the `dist/` directory.
 - **New:** **Collapsible Panel** — Toggle the movie info panel open/closed with smooth chevron animation
 - **New:** `POST /api/movie-details` server endpoint scrapes Letterboxd film pages for rich metadata
 - **New:** **Watchlist Enrichment** — Dropdown shows rating stars, genre pills, and cast for every watchlist entry (batch-fetched 5 at a time)
+- **New:** **Poster Thumbnails** in watchlist dropdown — each item shows a small poster image with film icon fallback
+- **New:** **Year-Disambiguated Slugs** — when filename includes a year and Letterboxd returns a wrong-year match (e.g. "The Fall Guy" 1921 vs 2024), automatically retries with `slug-year`
 - **Fixed:** Movie info now properly refreshes when switching between files (stale data no longer persists)
 - **Fixed:** Duplicate director names removed from metadata results
 - **Fixed:** Release group remnants (SPARKS, GECKOS, PEACE) no longer leak into cleaned movie names from filename parsing
 - **Fixed:** `h264`/`h265` codec tags now properly stripped from filenames
+- **Improved:** Unrated watchlist items show `N/A` instead of a blank rating slot
 - **Technical:** Fetch-id pattern prevents race conditions when rapidly switching files
 
 ### v1.0.4 (2026-05-12)
