@@ -308,6 +308,40 @@ app.post('/api/movie-details', async (req, res) => {
   }
 });
 
+app.post('/api/watchlist/enrich', async (req, res) => {
+  const { items } = req.body;
+  if (!Array.isArray(items)) return res.status(400).json({ error: 'Items array required' });
+  try {
+    const result: Record<string, any> = {};
+    const concurrency = 5;
+    const urls = items.filter((i: any) => i.url).map((i: any) => i.url);
+    for (let i = 0; i < urls.length; i += concurrency) {
+      const batch = urls.slice(i, i + concurrency);
+      await Promise.all(batch.map(async (url: string) => {
+        try {
+          const html = await fetchUrl(url);
+          const $ = cheerio.load(html);
+          const rating = $('meta[name="twitter:data2"]').attr('content') || $('.rating').text().trim() || '';
+          const genres: string[] = [];
+          $('a[href*="/films/genre/"]').each((_, el) => {
+            const g = $(el).text().trim();
+            if (g) genres.push(g);
+          });
+          const cast: string[] = [];
+          $('a[href*="/actor/"], a[href*="/cast/"]').each((_, el) => {
+            const c = $(el).text().trim();
+            if (c && !cast.includes(c) && cast.length < 4) cast.push(c);
+          });
+          result[url] = { rating, genres, cast };
+        } catch (_) {}
+      }));
+    }
+    res.json(result);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/search', (req, res) => {
   const { query } = req.body;
   if (!query) return res.status(400).json({ error: 'Query required' });

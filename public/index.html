@@ -178,7 +178,27 @@ body {
 }
 .select-dropdown .option:hover,
 .select-dropdown .option.active { background: var(--primary); color: #fff; }
-.select-dropdown .option .year { color: var(--text2); font-size: 12px; margin-left: auto; }
+.select-dropdown .option .year { color: var(--text2); font-size: 12px; margin-left: 4px; flex-shrink: 0; }
+.select-dropdown .option .opt-name { display: block; font-weight: 500; line-height: 1.3; }
+.select-dropdown .option .opt-meta { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+.select-dropdown .option .opt-genre {
+  font-size: 10px; padding: 1px 6px; border-radius: 4px;
+  background: rgba(108,92,231,0.12); color: var(--primary);
+  white-space: nowrap;
+}
+.select-dropdown .option:hover .opt-genre,
+.select-dropdown .option.active .opt-genre { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); }
+.select-dropdown .option .opt-cast {
+  display: block; font-size: 11px; color: var(--text2); margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.select-dropdown .option:hover .opt-cast,
+.select-dropdown .option.active .opt-cast { color: rgba(255,255,255,0.6); }
+.select-dropdown .option .opt-rating {
+  font-size: 11px; font-weight: 600; color: var(--yellow); flex-shrink: 0;
+  display: inline-flex; align-items: center; gap: 2px;
+}
+.select-dropdown .option .opt-rating i { font-size: 10px; }
 .select-dropdown .option:hover .year,
 .select-dropdown .option.active .year { color: rgba(255,255,255,0.7); }
 .select-dropdown .no-results {
@@ -995,6 +1015,7 @@ body {
 const state = {
   mode: 'auto',
   watchlist: [],
+  watchlistEnriched: {},
   results: [],
   downloads: [],
   files: [],
@@ -1214,6 +1235,11 @@ async function loadWatchlist() {
     state.watchlistError = true;
   }
   renderWatchlist();
+  if (state.watchlist.length && state.watchlist.some(m => m.url)) {
+    api('/api/watchlist/enrich', { method: 'POST', body: JSON.stringify({ items: state.watchlist }) }).then(r => {
+      if (r) { state.watchlistEnriched = r; renderWatchlist(); }
+    });
+  }
 }
 
 function renderWatchlist() {
@@ -1232,7 +1258,19 @@ function renderWatchlist() {
     const div = document.createElement('div');
     div.className = 'option';
     div.dataset.value = movie.num;
-    div.innerHTML = `<i class="fas fa-film" style="font-size:12px;opacity:0.6"></i>${movie.name} <span class="year">${movie.year || ''}</span>`;
+    const enriched = state.watchlistEnriched[movie.url];
+    const rating = enriched?.rating || movie.rating || '';
+    const ratingVal = rating.match(/[\d.]+/)?.[0] || '';
+    const genres = enriched?.genres || [];
+    const cast = enriched?.cast || [];
+    div.innerHTML = `<i class="fas fa-film" style="font-size:12px;opacity:0.6;flex-shrink:0"></i>
+      <span style="flex:1;min-width:0">
+        <span class="opt-name">${movie.name}</span>
+        <span class="opt-meta">${genres.slice(0, 3).map(g => `<span class="opt-genre">${g}</span>`).join('')}</span>
+        ${cast.length ? `<span class="opt-cast">${cast.join(', ')}</span>` : ''}
+      </span>
+      <span class="year">${movie.year || ''}</span>
+      ${ratingVal ? `<span class="opt-rating"><i class="fas fa-star"></i>${ratingVal}</span>` : ''}`;
     div.addEventListener('click', () => selectMovie(movie));
     optionsContainer.appendChild(div);
   });
