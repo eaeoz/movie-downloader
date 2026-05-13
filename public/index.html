@@ -361,6 +361,173 @@ body {
 }
 .media-player .player-header .close-player:hover { color: var(--red); }
 
+/* Movie Info Panel */
+.movie-info {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+  transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  max-height: 0;
+  opacity: 0;
+}
+.movie-info.visible {
+  max-height: 600px;
+  opacity: 1;
+}
+.movie-info-inner {
+  display: flex;
+  gap: 20px;
+  padding: 16px 20px;
+}
+.movie-info .mi-poster {
+  flex-shrink: 0;
+  width: 120px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+.movie-info .mi-poster img {
+  width: 100%;
+  display: block;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  background: var(--bg3);
+}
+.movie-info .mi-body {
+  flex: 1;
+  min-width: 0;
+}
+.movie-info .mi-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.movie-info .mi-title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.movie-info .mi-year {
+  font-size: 14px;
+  color: var(--text2);
+  font-weight: 400;
+}
+.movie-info .mi-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--yellow);
+  background: rgba(253,203,110,0.1);
+  padding: 2px 10px;
+  border-radius: 20px;
+  margin-left: auto;
+}
+.movie-info .mi-rating i { font-size: 11px; }
+.movie-info .mi-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.movie-info .mi-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--bg3);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+.movie-info .mi-tag i { font-size: 10px; opacity: 0.7; }
+.movie-info .mi-tag.genre { border-color: rgba(108,92,231,0.3); color: var(--primary); background: rgba(108,92,231,0.08); }
+.movie-info .mi-tag.dir { border-color: rgba(0,206,201,0.3); color: var(--accent); background: rgba(0,206,201,0.08); }
+.movie-info .mi-tag.cast { border-color: rgba(253,203,110,0.3); color: var(--yellow); background: rgba(253,203,110,0.08); }
+.movie-info .mi-desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text2);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.movie-info .mi-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text2);
+  border-top: 1px solid var(--border);
+  transition: color 0.2s;
+  user-select: none;
+}
+.movie-info .mi-toggle:hover { color: var(--primary); }
+.movie-info .mi-toggle i { transition: transform 0.3s ease; }
+.movie-info.collapsed .movie-info-inner { display: none; }
+.movie-info.collapsed { max-height: 40px !important; }
+.movie-info.collapsed .mi-toggle i { transform: rotate(180deg); }
+
+@keyframes sk-shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+.movie-info .mi-skeleton {
+  display: none;
+  flex-direction: row;
+  gap: 20px;
+  padding: 16px 20px;
+}
+.movie-info.loading .mi-skeleton { display: flex; }
+.movie-info.loading .movie-info-inner { display: none; }
+.movie-info.loading .mi-toggle { border-top-color: transparent; }
+.mi-skeleton .sk-poster {
+  width: 120px;
+  aspect-ratio: 2/3;
+  border-radius: 8px;
+  flex-shrink: 0;
+  background: linear-gradient(90deg, var(--bg3) 25%, var(--surface2) 50%, var(--bg3) 75%);
+  background-size: 200px 100%;
+  animation: sk-shimmer 1.5s ease-in-out infinite;
+}
+.mi-skeleton .sk-body { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.mi-skeleton .sk-line {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--bg3) 25%, var(--surface2) 50%, var(--bg3) 75%);
+  background-size: 200px 100%;
+  animation: sk-shimmer 1.5s ease-in-out infinite;
+}
+.mi-skeleton .sk-title { height: 22px; width: 60%; }
+.mi-skeleton .sk-subtitle { width: 30%; }
+.mi-skeleton .sk-tags { display: flex; gap: 8px; }
+.mi-skeleton .sk-tag {
+  height: 22px; width: 60px; border-radius: 20px;
+  background: linear-gradient(90deg, var(--bg3) 25%, var(--surface2) 50%, var(--bg3) 75%);
+  background-size: 200px 100%;
+  animation: sk-shimmer 1.5s ease-in-out infinite;
+}
+.mi-skeleton .sk-text { width: 90%; }
+.mi-skeleton .sk-text.short { width: 55%; }
+
+@media (max-width: 768px) {
+  .movie-info-inner { flex-direction: column; align-items: center; text-align: center; padding: 12px 16px; }
+  .movie-info .mi-poster { width: 100px; }
+  .movie-info .mi-header { justify-content: center; }
+  .movie-info .mi-rating { margin-left: 0; }
+  .movie-info .mi-meta { justify-content: center; }
+  .movie-info .mi-skeleton { flex-direction: column; align-items: center; }
+  .mi-skeleton .sk-poster { width: 100px; }
+}
+
 /* Modal */
 .modal-overlay {
   display: none; position: fixed; inset: 0;
@@ -612,6 +779,31 @@ body {
         <button class="close-player" id="closePlayer"><i class="fas fa-times"></i></button>
       </div>
       <video id="videoPlayer" controls autoplay></video>
+      <div class="movie-info" id="movieInfo">
+        <div class="movie-info-inner" id="miInner">
+          <div class="mi-poster"><img id="miPoster" alt="poster"></div>
+          <div class="mi-body">
+            <div class="mi-header">
+              <span class="mi-title" id="miTitle"></span>
+              <span class="mi-year" id="miYear"></span>
+              <span class="mi-rating" id="miRating"><i class="fas fa-star"></i> <span></span></span>
+            </div>
+            <div class="mi-meta" id="miMeta"></div>
+            <div class="mi-desc" id="miDesc"></div>
+          </div>
+        </div>
+        <div class="mi-skeleton" id="miSkeleton">
+          <div class="sk-poster"></div>
+          <div class="sk-body">
+            <div class="sk-line sk-title"></div>
+            <div class="sk-line sk-subtitle"></div>
+            <div class="sk-tags"><span class="sk-tag"></span><span class="sk-tag"></span><span class="sk-tag"></span></div>
+            <div class="sk-line sk-text"></div>
+            <div class="sk-line sk-text short"></div>
+          </div>
+        </div>
+        <div class="mi-toggle" id="miToggle"><i class="fas fa-chevron-up"></i> Movie Info</div>
+      </div>
     </div>
   </div>
 
@@ -813,6 +1005,8 @@ const state = {
   watchlistError: false,
   movieSelectOpen: false,
   selectedMovie: null,
+  movieDetails: null,
+  movieDetailsLoading: false,
   downloadInterval: null,
   filesInterval: null,
   openFolders: new Set()
@@ -1064,7 +1258,7 @@ function filterWatchlist(q) {
   } else if (noRes) noRes.remove();
 }
 
-function selectMovie(movie) {
+async function selectMovie(movie) {
   state.selectedMovie = movie;
   selectTrigger.querySelector('.placeholder').textContent = movie.name + (movie.year ? ` (${movie.year})` : '');
   selectTrigger.querySelector('.placeholder').style.color = 'var(--text)';
@@ -1072,6 +1266,27 @@ function selectMovie(movie) {
   const query = movie.name + (movie.year ? ` ${movie.year}` : '');
   $('manualSearchInput').value = query;
   manualSearch();
+  if (movie.url) {
+    fetchMovieDetails(movie.url, movie);
+  }
+}
+
+async function fetchMovieDetails(url, movie) {
+  const fetchId = ++movieDetailsFetchId;
+  state.movieDetails = null;
+  state.movieDetailsLoading = true;
+  if ($('mediaPlayer').classList.contains('visible')) renderMovieInfo(movie.name);
+  const data = await api('/api/movie-details', { method: 'POST', body: JSON.stringify({ url }) });
+  if (fetchId !== movieDetailsFetchId) return;
+  state.movieDetailsLoading = false;
+  if (data && !data.error) {
+    state.movieDetails = { ...data, name: movie.name, year: movie.year || data.year };
+  } else {
+    state.movieDetails = { name: movie.name, year: movie.year };
+  }
+  if ($('mediaPlayer').classList.contains('visible')) {
+    renderMovieInfo(movie.name);
+  }
 }
 
 // Dropdown
@@ -1421,6 +1636,18 @@ function countFiles(items) {
 }
 
 // Media player
+function extractMovieFromFilename(name) {
+  let s = name.replace(/\.[^.]+$/, '').replace(/\./g, ' ');
+  const yearMatch = s.match(/\b(19\d{2}|20\d{2})\b/);
+  const year = yearMatch ? yearMatch[1] : '';
+  let movieName = year ? s.replace(yearMatch[0], '').trim() : s;
+  movieName = movieName.replace(/(1080p|720p|2160p|4k|uhd|bluray|blu-ray|brrip|bdrip|webdl|webrip|web-dl|hdtv|x264|x265|hevc|dvdrip|dvd|aac|ac3|dts|mp3)\b/gi, '').replace(/\s+/g, ' ').trim();
+  movieName = movieName.replace(/[_-]+/g, ' ').trim();
+  return { name: movieName, year };
+}
+
+let movieDetailsFetchId = 0;
+
 function playMedia(relPath, name) {
   const player = $('mediaPlayer');
   const video = $('videoPlayer');
@@ -1430,11 +1657,111 @@ function playMedia(relPath, name) {
   video.src = '/api/media/' + relPath.replace(/\\/g, '/');
   video.load();
   video.play();
+
+  state.movieDetails = null;
+  state.movieDetailsLoading = true;
+  renderMovieInfo(name);
+
+  const fetchId = ++movieDetailsFetchId;
+  const guess = extractMovieFromFilename(name);
+
+  const done = (details, fName) => {
+    if (fetchId !== movieDetailsFetchId) return;
+    state.movieDetails = details;
+    state.movieDetailsLoading = false;
+    renderMovieInfo(fName);
+  };
+
+  const match = state.watchlist.find(m =>
+    m.name.toLowerCase() === guess.name.toLowerCase() ||
+    m.name.toLowerCase().includes(guess.name.toLowerCase()) ||
+    guess.name.toLowerCase().includes(m.name.toLowerCase())
+  );
+
+  if (match && match.url) {
+    api('/api/movie-details', { method: 'POST', body: JSON.stringify({ url: match.url }) }).then(data => {
+      if (data && !data.error) {
+        done({ ...data, name: match.name, year: match.year || data.year }, name);
+      } else {
+        done({ name: match.name, year: match.year }, name);
+      }
+    });
+  } else if (guess.name) {
+    const slug = guess.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    api('/api/movie-details', { method: 'POST', body: JSON.stringify({ url: 'https://letterboxd.com/film/' + slug + '/' }) }).then(data => {
+      if (data && !data.error) {
+        done({ ...data, name: guess.name, year: guess.year || data.year }, name);
+      } else {
+        done({ name: guess.name, year: guess.year }, name);
+      }
+    });
+  } else {
+    done({ name: name.replace(/\.[^.]+$/, '') }, name);
+  }
+}
+
+function renderMovieInfo(fallbackName) {
+  const info = $('movieInfo');
+  info.classList.add('visible');
+  info.classList.toggle('loading', state.movieDetailsLoading);
+  const details = state.movieDetails;
+  if (!details || state.movieDetailsLoading) return;
+  const name = details.name || fallbackName || '';
+  const year = details.year || '';
+  const poster = details.poster || '';
+  const rating = details.rating || '';
+  const genres = details.genres || [];
+  const directors = details.directors || [];
+  const cast = details.cast || [];
+  const runtime = details.runtime || '';
+  const description = details.description || '';
+
+  $('miPoster').src = poster || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 200 300%22%3E%3Crect fill=%22%231a1a2e%22 width=%22200%22 height=%22300%22/%3E%3Ctext x=%22100%22 y=%22150%22 text-anchor=%22middle%22 fill=%22%23666680%22 font-size=%2240%22%3E🎬%3C/text%3E%3C/svg%3E';
+  $('miTitle').textContent = name;
+  $('miYear').textContent = year;
+  const ratingEl = $('miRating');
+  if (rating) {
+    ratingEl.style.display = 'inline-flex';
+    ratingEl.querySelector('span').textContent = rating;
+  } else {
+    ratingEl.style.display = 'none';
+  }
+  const meta = $('miMeta');
+  meta.innerHTML = '';
+  directors.forEach(d => {
+    const t = document.createElement('span');
+    t.className = 'mi-tag dir';
+    t.innerHTML = `<i class="fas fa-video"></i>${d}`;
+    meta.appendChild(t);
+  });
+  genres.slice(0, 5).forEach(g => {
+    const t = document.createElement('span');
+    t.className = 'mi-tag genre';
+    t.innerHTML = `<i class="fas fa-tag"></i>${g}`;
+    meta.appendChild(t);
+  });
+  cast.slice(0, 6).forEach(c => {
+    const t = document.createElement('span');
+    t.className = 'mi-tag cast';
+    t.innerHTML = `<i class="fas fa-user"></i>${c}`;
+    meta.appendChild(t);
+  });
+  if (runtime) {
+    const t = document.createElement('span');
+    t.className = 'mi-tag';
+    t.innerHTML = `<i class="fas fa-clock"></i>${runtime}`;
+    meta.appendChild(t);
+  }
+  $('miDesc').textContent = description;
 }
 
 $('closePlayer').addEventListener('click', () => {
   $('mediaPlayer').classList.remove('visible');
   $('videoPlayer').src = '';
+});
+
+$('miToggle').addEventListener('click', () => {
+  $('movieInfo').classList.toggle('collapsed');
 });
 
 // Open download folder

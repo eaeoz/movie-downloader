@@ -5,6 +5,9 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSy
 import { createReadStream } from 'fs';
 import { join, resolve, extname } from 'path';
 import { tmpdir } from 'os';
+import { get as httpGet } from 'http';
+import { get as httpsGet } from 'https';
+import * as cheerio from 'cheerio';
 import WebTorrent from 'webtorrent';
 
 const app = express();
@@ -246,6 +249,60 @@ app.post('/api/watchlist/refresh', (_req, res) => {
       return res.json(JSON.parse(readFileSync(WATCHLIST_CACHE, 'utf-8')));
     }
     res.json([]);
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+function fetchUrl(url: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const mod = url.startsWith('https') ? httpsGet : httpGet;
+    mod(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+      timeout: 10000
+    }, (resp) => {
+      const chunks: Buffer[] = [];
+      resp.on('data', (c: Buffer) => chunks.push(c));
+      resp.on('end', () => resolve(Buffer.concat(chunks).toString()));
+      resp.on('error', reject);
+    }).on('error', reject).on('timeout', function(this: any) { this.destroy(); reject(new Error('Timeout')); });
+  });
+}
+
+app.post('/api/movie-details', async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ error: 'URL required' });
+  try {
+    const html = await fetchUrl(url);
+    const $ = cheerio.load(html);
+
+    const name = $('meta[property="og:title"]').attr('content') || '';
+    const poster = $('meta[property="og:image"]').attr('content') || '';
+    const description = $('meta[property="og:description"]').attr('content') || '';
+    const rating = $('meta[name="twitter:data2"]').attr('content') || $('.rating').text().trim() || '';
+    const year = $('meta[property="og:title"]').attr('content')?.match(/\((\d{4})\)/)?.[1] || '';
+
+    const genres: string[] = [];
+    $('a[href*="/films/genre/"]').each((_, el) => {
+      const g = $(el).text().trim();
+      if (g) genres.push(g);
+    });
+
+    const directors: string[] = [];
+    $('a[href*="/director/"]').each((_, el) => {
+      const d = $(el).text().trim();
+      if (d && !directors.includes(d)) directors.push(d);
+    });
+
+    const cast: string[] = [];
+    $('a[href*="/actor/"], a[href*="/cast/"]').each((_, el) => {
+      const c = $(el).text().trim();
+      if (c && !cast.includes(c) && cast.length < 8) cast.push(c);
+    });
+
+    const runtime = $('p[itemprop="duration"]').text().trim() || $('.runtime').text().trim() || '';
+
+    res.json({ name, poster, description, rating, year, genres, directors, cast, runtime });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
