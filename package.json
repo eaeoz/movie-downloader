@@ -87,8 +87,11 @@
     }
   },
   "dependencies": {
+    "adm-zip": "^0.5.17",
+    "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",
     "express": "^4.18.2",
+    "parse-torrent": "^11.0.19",
     "webtorrent": "1.9.7"
   },
   "devDependencies": {
