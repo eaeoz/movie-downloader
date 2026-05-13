@@ -2,8 +2,8 @@
 
 Modern torrent downloader with **Letterboxd** watchlist integration — Search and download movies from a beautiful desktop app.
 
-[![Download Setup](https://img.shields.io/badge/Download-Windows%20Setup-blue?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.4/Movie.Downloader.Setup.1.0.4.exe)
-[![Download Portable](https://img.shields.io/badge/Download-Portable%20Version-orange?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.4/Movie.Downloader_portable_1.0.4.exe)
+[![Download Setup](https://img.shields.io/badge/Download-Windows%20Setup-blue?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.5/Movie.Downloader.Setup.1.0.5.exe)
+[![Download Portable](https://img.shields.io/badge/Download-Portable%20Version-orange?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.5/Movie.Downloader_portable_1.0.5.exe)
 [![GitHub](https://img.shields.io/badge/Source-GitHub-black?style=for-the-badge&logo=github)](https://github.com/eaeoz/movie-downloader)
 
 > **Author:** Sedat ERGOZ — [eaeoz](https://github.com/eaeoz) — sedatergoz@gmail.com
@@ -29,6 +29,8 @@ Movie Downloader bridges your Letterboxd watchlist with torrent search engines t
 - 🔍 **Multi-Source Search** — Searches YTS, ThePirateBay, RARBG, TorrentsCSV
 - 📥 **Smart Downloads** — Auto or Manual mode for finding the best quality
 - 🗂️ **Library Browser** — Browse downloaded files organized by folder
+- ▶️ **Built-in Video Player** — Play media files directly in the app with range-seeking support
+- 🎴 **Movie Info Panel** — Rich metadata display (poster, rating, genres, directors, cast, plot) below the player
 - 🌓 **Dark & Light Theme** — Toggle between themes with persistent preference
 
 ---
@@ -55,6 +57,19 @@ Movie Downloader bridges your Letterboxd watchlist with torrent search engines t
 - **Incomplete folder system** — Downloads go to `_incomplete/`, moved to main folder on completion
 - **Orphan cleanup** — Stale incomplete folders from crashed sessions cleaned on startup
 
+### ▶️ Built-in Video Player
+- Play `.mp4`, `.mkv`, `.webm`, `.avi`, `.mov` files directly in the app
+- HTTP range-request support for seeking and scrubbing
+- Seamless integration with the Library file tree — click any media file to play
+
+### 🎴 Movie Info Panel
+- Displays rich metadata below the video player: poster, title, year, rating, genres, directors, cast, and plot
+- **Smart Lookup** — Automatically extracts movie name from filenames and fetches details from Letterboxd
+- **Watchlist Matching** — If the file matches a watchlist entry, uses that data for higher accuracy
+- **Collapsible** — Toggle the panel open/closed with smooth animation
+- **Skeleton Loading** — Shimmer placeholder shown while data is being fetched, no jarring empty states
+- Responsive layout adapts on smaller screens
+
 ### 🗂️ Library Browser
 - Folder tree view of all downloaded files
 - Organized by download folder structure
@@ -72,7 +87,7 @@ Movie Downloader bridges your Letterboxd watchlist with torrent search engines t
 
 ### Option 1: Windows Installer (Recommended)
 
-[![Download Setup](https://img.shields.io/badge/Download-Movie.Downloader.Setup.1.0.4.exe-blue?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.4/Movie.Downloader.Setup.1.0.4.exe)
+[![Download Setup](https://img.shields.io/badge/Download-Movie.Downloader.Setup.1.0.5.exe-blue?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.5/Movie.Downloader.Setup.1.0.5.exe)
 
 - Double-click the installer and follow the wizard
 - Desktop and Start Menu shortcuts created automatically
@@ -80,7 +95,7 @@ Movie Downloader bridges your Letterboxd watchlist with torrent search engines t
 
 ### Option 2: Portable Version
 
-[![Download Portable](https://img.shields.io/badge/Download-Movie.Downloader_portable_1.0.4.exe-orange?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.4/Movie.Downloader_portable_1.0.4.exe)
+[![Download Portable](https://img.shields.io/badge/Download-Movie.Downloader_portable_1.0.5.exe-orange?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.5/Movie.Downloader_portable_1.0.5.exe)
 
 - No installation required — just run the executable
 - No admin rights needed
@@ -129,6 +144,8 @@ Toggle between **Auto** and **Manual** mode in the top bar:
 - Monitor progress in the **Downloads** panel on the right
 - Cancel any active download with the cancel button
 - Browse your **Library** tree to find all downloaded files organized by folder
+- Click any media file (🎬) to play it directly in the built-in video player
+- The **Movie Info Panel** below the player automatically shows poster, rating, genres, cast and plot — fetched from Letterboxd
 - Click the **Open Folder** button (📂) in the top bar to open the download directory in Explorer
 
 ### 6. System Tray
@@ -191,6 +208,18 @@ Outputs are placed in the `dist/` directory.
 ---
 
 ## 📋 Changelog
+
+### v1.0.5 (2026-05-13)
+
+- **New:** Rich **Movie Info Panel** below the video player — displays poster, title, year, rating, genres, directors, cast, and plot description
+- **New:** **Smart Movie Lookup** — Filename parsing automatically extracts movie name/year and fetches metadata from Letterboxd
+- **New:** **Watchlist Matching** — If the playing file matches a watchlist entry, uses that data for higher accuracy
+- **New:** **Skeleton Loading Animation** — Clean shimmer placeholder while movie data is being fetched, no empty/flashing states
+- **New:** **Collapsible Panel** — Toggle the movie info panel open/closed with smooth chevron animation
+- **New:** `POST /api/movie-details` server endpoint scrapes Letterboxd film pages for rich metadata
+- **Fixed:** Movie info now properly refreshes when switching between files (stale data no longer persists)
+- **Fixed:** Duplicate director names removed from metadata results
+- **Technical:** Fetch-id pattern prevents race conditions when rapidly switching files
 
 ### v1.0.4 (2026-05-12)
 
