@@ -199,6 +199,15 @@ body {
   display: inline-flex; align-items: center; gap: 2px;
 }
 .select-dropdown .option .opt-rating i { font-size: 10px; }
+.select-dropdown .option .opt-poster {
+  width: 28px; height: 42px; border-radius: 4px; flex-shrink: 0;
+  object-fit: cover; background: var(--bg3);
+}
+.select-dropdown .option .opt-poster-fallback {
+  width: 28px; height: 42px; border-radius: 4px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg3); font-size: 14px; color: var(--text2);
+}
 .select-dropdown .option:hover .year,
 .select-dropdown .option.active .year { color: rgba(255,255,255,0.7); }
 .select-dropdown .no-results {
@@ -1263,7 +1272,9 @@ function renderWatchlist() {
     const ratingVal = rating.match(/[\d.]+/)?.[0] || '';
     const genres = enriched?.genres || [];
     const cast = enriched?.cast || [];
-    div.innerHTML = `<i class="fas fa-film" style="font-size:12px;opacity:0.6;flex-shrink:0"></i>
+    const posterUrl = enriched?.poster || '';
+    div.innerHTML = `${posterUrl ? `<img class="opt-poster" src="${posterUrl}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" loading="lazy">` : ''}
+      <div class="opt-poster-fallback"${posterUrl ? ' style="display:none"' : ''}><i class="fas fa-film"></i></div>
       <span style="flex:1;min-width:0">
         <span class="opt-name">${movie.name}</span>
         <span class="opt-meta">${genres.slice(0, 3).map(g => `<span class="opt-genre">${g}</span>`).join('')}</span>

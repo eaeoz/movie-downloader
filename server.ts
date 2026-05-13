@@ -332,7 +332,8 @@ app.post('/api/watchlist/enrich', async (req, res) => {
             const c = $(el).text().trim();
             if (c && !cast.includes(c) && cast.length < 4) cast.push(c);
           });
-          result[url] = { rating, genres, cast };
+          const poster = $('meta[property="og:image"]').attr('content') || '';
+          result[url] = { rating, genres, cast, poster };
         } catch (_) {}
       }));
     }
