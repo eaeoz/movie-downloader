@@ -1728,14 +1728,24 @@ function playMedia(relPath, name) {
       }
     });
   } else if (guess.name) {
-    const slug = guess.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    api('/api/movie-details', { method: 'POST', body: JSON.stringify({ url: 'https://letterboxd.com/film/' + slug + '/' }) }).then(data => {
-      if (data && !data.error) {
-        done({ ...data, name: guess.name, year: guess.year || data.year }, name);
-      } else {
-        done({ name: guess.name, year: guess.year }, name);
-      }
-    });
+    const baseSlug = guess.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const yearSlug = guess.year ? baseSlug + '-' + guess.year : null;
+    const trySlug = (slug, fallback) => {
+      api('/api/movie-details', { method: 'POST', body: JSON.stringify({ url: 'https://letterboxd.com/film/' + slug + '/' }) }).then(data => {
+        if (data && !data.error && data.poster) {
+          if (fallback && guess.year && data.year && data.year !== guess.year) {
+            trySlug(fallback, null);
+          } else {
+            done({ ...data, name: guess.name, year: guess.year || data.year }, name);
+          }
+        } else if (fallback) {
+          trySlug(fallback, null);
+        } else {
+          done({ name: guess.name, year: guess.year }, name);
+        }
+      });
+    };
+    trySlug(baseSlug, yearSlug);
   } else {
     done({ name: name.replace(/\.[^.]+$/, '') }, name);
   }
@@ -1746,7 +1756,10 @@ function renderMovieInfo(fallbackName) {
   info.classList.add('visible');
   info.classList.toggle('loading', state.movieDetailsLoading);
   const details = state.movieDetails;
-  if (!details || state.movieDetailsLoading) return;
+  if (!details || state.movieDetailsLoading) {
+    $('miPoster').removeAttribute('src');
+    return;
+  }
   const name = details.name || fallbackName || '';
   const year = details.year || '';
   const poster = details.poster || '';
