@@ -1676,11 +1676,14 @@ function countFiles(items) {
 // Media player
 function extractMovieFromFilename(name) {
   let s = name.replace(/\.[^.]+$/, '').replace(/\./g, ' ');
+  s = s.replace(/\[.*?\]|\(.*?\)/g, '').trim();
   const yearMatch = s.match(/\b(19\d{2}|20\d{2})\b/);
   const year = yearMatch ? yearMatch[1] : '';
   let movieName = year ? s.replace(yearMatch[0], '').trim() : s;
-  movieName = movieName.replace(/(1080p|720p|2160p|4k|uhd|bluray|blu-ray|brrip|bdrip|webdl|webrip|web-dl|hdtv|x264|x265|hevc|dvdrip|dvd|aac|ac3|dts|mp3)\b/gi, '').replace(/\s+/g, ' ').trim();
-  movieName = movieName.replace(/[_-]+/g, ' ').trim();
+  movieName = movieName.replace(/\b(1080p|720p|2160p|4k|uhd|bluray|blu-ray|brrip|bdrip|webdl|webrip|web-dl|hdtv|x264|x265|h264|h265|hevc|dvdrip|dvd|aac[35]|ac3|dts|mp3|yts|mx|amzn|web|hdr|10bit|8bit|proper|repack|internal|multi|dual|audio)\b/gi, '');
+  movieName = movieName.replace(/-\s*[A-Za-z]+\s*$/g, '').trim();
+  movieName = movieName.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  movieName = movieName.replace(/\b\d+\b/g, '').replace(/\s+/g, ' ').trim();
   return { name: movieName, year };
 }
 
@@ -1795,6 +1798,7 @@ function renderMovieInfo(fallbackName) {
 
 $('closePlayer').addEventListener('click', () => {
   $('mediaPlayer').classList.remove('visible');
+  $('movieInfo').classList.remove('visible', 'loading', 'collapsed');
   $('videoPlayer').src = '';
 });
 

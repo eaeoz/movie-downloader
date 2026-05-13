@@ -217,8 +217,11 @@ Outputs are placed in the `dist/` directory.
 - **New:** **Skeleton Loading Animation** — Clean shimmer placeholder while movie data is being fetched, no empty/flashing states
 - **New:** **Collapsible Panel** — Toggle the movie info panel open/closed with smooth chevron animation
 - **New:** `POST /api/movie-details` server endpoint scrapes Letterboxd film pages for rich metadata
+- **New:** **Watchlist Enrichment** — Dropdown shows rating stars, genre pills, and cast for every watchlist entry (batch-fetched 5 at a time)
 - **Fixed:** Movie info now properly refreshes when switching between files (stale data no longer persists)
 - **Fixed:** Duplicate director names removed from metadata results
+- **Fixed:** Release group remnants (SPARKS, GECKOS, PEACE) no longer leak into cleaned movie names from filename parsing
+- **Fixed:** `h264`/`h265` codec tags now properly stripped from filenames
 - **Technical:** Fetch-id pattern prevents race conditions when rapidly switching files
 
 ### v1.0.4 (2026-05-12)
