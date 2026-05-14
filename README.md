@@ -2,8 +2,8 @@
 
 Modern torrent downloader with **Letterboxd** watchlist integration — Search and download movies from a beautiful desktop app.
 
-[![Download Setup](https://img.shields.io/badge/Download-Windows%20Setup-blue?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.5/Movie.Downloader.Setup.1.0.5.exe)
-[![Download Portable](https://img.shields.io/badge/Download-Portable%20Version-orange?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.5/Movie.Downloader_portable_1.0.5.exe)
+[![Download Setup](https://img.shields.io/badge/Download-Windows%20Setup-blue?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.6/Movie.Downloader.Setup.1.0.6.exe)
+[![Download Portable](https://img.shields.io/badge/Download-Portable%20Version-orange?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.6/Movie.Downloader_portable_1.0.6.exe)
 [![GitHub](https://img.shields.io/badge/Source-GitHub-black?style=for-the-badge&logo=github)](https://github.com/eaeoz/movie-downloader)
 
 > **Author:** Sedat ERGOZ — [eaeoz](https://github.com/eaeoz) — sedatergoz@gmail.com
@@ -87,7 +87,7 @@ Movie Downloader bridges your Letterboxd watchlist with torrent search engines t
 
 ### Option 1: Windows Installer (Recommended)
 
-[![Download Setup](https://img.shields.io/badge/Download-Movie.Downloader.Setup.1.0.5.exe-blue?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.5/Movie.Downloader.Setup.1.0.5.exe)
+[![Download Setup](https://img.shields.io/badge/Download-Movie.Downloader.Setup.1.0.6.exe-blue?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.6/Movie.Downloader.Setup.1.0.6.exe)
 
 - Double-click the installer and follow the wizard
 - Desktop and Start Menu shortcuts created automatically
@@ -95,7 +95,7 @@ Movie Downloader bridges your Letterboxd watchlist with torrent search engines t
 
 ### Option 2: Portable Version
 
-[![Download Portable](https://img.shields.io/badge/Download-Movie.Downloader_portable_1.0.5.exe-orange?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.5/Movie.Downloader_portable_1.0.5.exe)
+[![Download Portable](https://img.shields.io/badge/Download-Movie.Downloader_portable_1.0.6.exe-orange?style=for-the-badge&logo=windows)](https://github.com/eaeoz/movie-downloader/releases/download/1.0.6/Movie.Downloader_portable_1.0.6.exe)
 
 - No installation required — just run the executable
 - No admin rights needed
@@ -208,6 +208,11 @@ Outputs are placed in the `dist/` directory.
 ---
 
 ## 📋 Changelog
+
+### v1.0.6 (2026-05-14)
+
+- **Improved:** Application no longer depends on globally installed `tor-dl` package — all dependencies bundled
+- **Fixed:** Performance optimizations and CPU usage improvements during downloads
 
 ### v1.0.5 (2026-05-13)
 
