@@ -174,7 +174,7 @@ function createWindow() {
     minHeight:       600,
     icon:            icon,
     backgroundColor: '#0f0f0f',
-    show:            true,
+    show:            false,
     frame:           false,
     roundedCorners:  true,
     webPreferences: {
@@ -195,11 +195,18 @@ function createWindow() {
     }
   }
 
-  // Show loading screen immediately
+  // Show loading screen
   showLoading('Starting server...');
 
-  // Start server in-process
-  startBackend();
+  // Show window only after the loading screen is actually painted
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
+
+  // Start server only after the loading screen has fully loaded (prevents navigation race)
+  mainWindow.webContents.once('did-finish-load', () => {
+    startBackend();
+  });
 
   // Wait for server, then load the real app
   serverReady.then(() => {
