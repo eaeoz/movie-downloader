@@ -80,10 +80,13 @@
       padding: 12px 24px;
       background: var(--bg2);
       border-bottom: 1px solid var(--border);
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
       position: sticky;
       top: 0;
       z-index: 100;
       backdrop-filter: blur(12px);
+      -webkit-app-region: drag;
+      user-select: none;
     }
 
     .topbar .logo {
@@ -112,12 +115,48 @@
       cursor: pointer;
       transition: all var(--transition);
       font-size: 15px;
+      -webkit-app-region: no-drag;
     }
 
     .top-btn:hover {
       background: var(--primary);
       color: #fff;
       border-color: var(--primary);
+    }
+
+    .mode-toggle {
+      -webkit-app-region: no-drag;
+    }
+
+    .win-controls {
+      display: flex;
+      gap: 0;
+      margin-right: -16px;
+      -webkit-app-region: no-drag;
+    }
+
+    .win-controls .win-btn {
+      width: 46px;
+      height: 38px;
+      border: none;
+      background: transparent;
+      color: var(--text2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s;
+      font-size: 13px;
+    }
+
+    .win-controls .win-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .win-controls .win-btn.close-btn:hover {
+      background: #e81123;
+      color: #fff;
     }
 
     /* Main Layout */
@@ -1554,6 +1593,11 @@
     <button class="top-btn" id="themeBtn" title="Toggle Theme"><i class="fas fa-moon"></i></button>
     <a href="https://github.com/eaeoz/movie-downloader" target="_blank" class="top-btn" title="GitHub"><i
         class="fab fa-github"></i></a>
+    <div class="win-controls" id="winControls">
+      <button class="win-btn" id="winMinimize" title="Minimize"><i class="fas fa-window-minimize"></i></button>
+      <button class="win-btn" id="winMaximize" title="Maximize"><i class="fas fa-window-maximize"></i></button>
+      <button class="win-btn close-btn" id="winClose" title="Close"><i class="fas fa-times"></i></button>
+    </div>
   </div>
 
   <div class="main">
@@ -1898,6 +1942,22 @@
       }
 
       $('themeBtn').addEventListener('click', () => setTheme(state.theme === 'dark' ? 'light' : 'dark'));
+
+      // Window controls (Electron only)
+      if (window.electronAPI?.minimizeWindow) {
+        $('winMinimize').addEventListener('click', () => window.electronAPI.minimizeWindow());
+        $('winMaximize').addEventListener('click', () => window.electronAPI.maximizeWindow());
+        $('winClose').addEventListener('click', () => window.electronAPI.closeWindow());
+
+        window.electronAPI.onMaximizeChange((maximized) => {
+          $('winMaximize').innerHTML = maximized
+            ? '<i class="fas fa-window-restore"></i>'
+            : '<i class="fas fa-window-maximize"></i>';
+          $('winMaximize').title = maximized ? 'Restore' : 'Maximize';
+        });
+      } else {
+        $('winControls').style.display = 'none';
+      }
 
       const savedTheme = localStorage.getItem('md-theme');
       if (savedTheme) setTheme(savedTheme);

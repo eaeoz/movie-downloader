@@ -52,7 +52,7 @@ const loadingHTML = `data:text/html;charset=utf-8,<!DOCTYPE html>
 <head><meta charset="UTF-8"><title>Starting...</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0f0f0f;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:20px;padding:24px}
+body{background:#0f0f0f;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:20px;padding:24px;-webkit-app-region:drag}
 .logo{font-size:22px;font-weight:700;background:linear-gradient(135deg,#6c5ce7,#00cec9);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .spinner{width:40px;height:40px;border:3px solid #2a2a4a;border-top-color:#6c5ce7;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -175,7 +175,8 @@ function createWindow() {
     icon:            icon,
     backgroundColor: '#0f0f0f',
     show:            true,
-    frame:           true,
+    frame:           false,
+    roundedCorners:  true,
     webPreferences: {
       preload:          path.join(appPath, 'preload.js'),
       contextIsolation: true,
@@ -233,6 +234,14 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+
+  // Notify renderer of maximize/restore state changes (for window control button icons)
+  mainWindow.on('maximize', () => {
+    mainWindow?.webContents.send('window-maximized-changed', true);
+  });
+  mainWindow.on('unmaximize', () => {
+    mainWindow?.webContents.send('window-maximized-changed', false);
   });
 }
 
@@ -339,6 +348,24 @@ ipcMain.handle('save-settings', (_e, data) => {
 ipcMain.handle('is-electron', () => true);
 
 ipcMain.handle('get-port', () => PORT);
+
+ipcMain.handle('window-minimize', () => {
+  if (mainWindow) mainWindow.minimize();
+});
+
+ipcMain.handle('window-maximize', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+});
+
+ipcMain.handle('window-close', () => {
+  if (mainWindow) mainWindow.close();
+});
 
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 

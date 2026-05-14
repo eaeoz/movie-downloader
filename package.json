@@ -80,7 +80,8 @@
       "uninstallerIcon": "data/icon.ico",
       "installerHeaderIcon": "data/icon.ico",
       "artifactName": "${productName} Setup ${version}.${ext}",
-      "shortcutName": "Movie Downloader"
+      "shortcutName": "Movie Downloader",
+      "runAfterFinish": false
     },
     "portable": {
       "artifactName": "${productName}_portable_${version}.${ext}"
