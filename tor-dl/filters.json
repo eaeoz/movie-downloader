@@ -1,0 +1,14 @@
+{
+  "category": "all",
+  "sources": "",
+  "minSeeds": 5,
+  "maxSeeds": 0,
+  "minSize": "700MB",
+  "maxSize": "4GB",
+  "sortBy": "seeds",
+  "order": "desc",
+  "limit": 70,
+  "qualityFilter": "1080p",
+  "searchAppend": "",
+  "_version": 1
+}

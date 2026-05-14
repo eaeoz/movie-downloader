@@ -101,10 +101,10 @@ function startBackend() {
     : path.join(appPath, 'downloads');
 
   const torDlPath = (() => {
-    if (!app.isPackaged) return path.join(appPath, '..', 'tor-dl');
+    if (!app.isPackaged) return path.join(appPath, 'tor-dl');
     const bundled = path.join(process.resourcesPath, 'tor-dl');
     if (fs.existsSync(bundled)) return bundled;
-    return path.join(appPath, '..', 'tor-dl');
+    return path.join(appPath, 'tor-dl');
   })();
 
   const dlPath = settings.downloadPath || defaultDl;

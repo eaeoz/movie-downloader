@@ -1,0 +1,173 @@
+{
+  "updateUrl": "https://raw.githubusercontent.com/eaeoz/tor-dl/main/sources.json",
+  "version": "1.0.0",
+  "sources": {
+    "yts": {
+      "enabled": true,
+      "name": "YTS",
+      "baseUrl": "https://yts.lt",
+      "searchUrl": "https://yts.lt/api/v2/list_movies.json",
+      "categories": [
+        "movie"
+      ],
+      "searchParam": "query_term",
+      "hasMagnet": true
+    },
+    "torrentscsv": {
+      "enabled": true,
+      "name": "torrents-csv",
+      "baseUrl": "https://torrents-csv.com",
+      "searchUrl": "https://torrents-csv.com/service/search",
+      "categories": [
+        "all"
+      ],
+      "searchParam": "q",
+      "hasMagnet": true
+    },
+    "eztv": {
+      "enabled": false,
+      "name": "EZTV",
+      "baseUrl": "https://eztv.io",
+      "searchUrl": "https://eztv.io/search/",
+      "categories": [
+        "tv"
+      ],
+      "searchParam": "search",
+      "hasMagnet": true
+    },
+    "solidtorrents": {
+      "enabled": false,
+      "name": "SolidTorrents",
+      "baseUrl": "https://solidtorrents.to",
+      "searchUrl": "https://solidtorrents.to/search",
+      "categories": [
+        "all"
+      ],
+      "searchParam": "q",
+      "hasMagnet": true
+    },
+    "thepiratebay": {
+      "enabled": true,
+      "name": "The Pirate Bay",
+      "baseUrl": "https://thepiratebay.org",
+      "searchUrl": "https://thepiratebay.org/search.php",
+      "categories": [
+        "all",
+        "movie",
+        "tv",
+        "music",
+        "games",
+        "apps"
+      ],
+      "searchParam": "q",
+      "hasMagnet": true
+    },
+    "torlock": {
+      "enabled": false,
+      "name": "TorLock",
+      "baseUrl": "https://www.torlock.com",
+      "searchUrl": "https://www.torlock.com/all/torrents",
+      "categories": [
+        "all"
+      ],
+      "searchParam": "q",
+      "hasMagnet": true
+    },
+    "torrentproject": {
+      "enabled": false,
+      "name": "TorrentProject",
+      "baseUrl": "https://torrentproject.site",
+      "searchUrl": "https://torrentproject.site",
+      "categories": [
+        "all"
+      ],
+      "searchParam": "s",
+      "hasMagnet": true
+    },
+    "limetorrents": {
+      "enabled": false,
+      "name": "Limetorrents",
+      "baseUrl": "https://limetorrent.store",
+      "searchUrl": "https://limetorrent.store/search",
+      "categories": [
+        "all",
+        "movie",
+        "tv",
+        "music",
+        "games",
+        "apps",
+        "anime",
+        "other"
+      ],
+      "searchParam": "q",
+      "hasMagnet": true
+    },
+    "1337x": {
+      "enabled": false,
+      "name": "1337x",
+      "baseUrl": "https://1337xx.to",
+      "searchUrl": "https://1337xx.to/category-search",
+      "categories": [
+        "all",
+        "movie",
+        "tv",
+        "music",
+        "games",
+        "apps",
+        "anime",
+        "documentary",
+        "other",
+        "xxx"
+      ],
+      "searchParam": "search",
+      "hasMagnet": true
+    },
+    "rarbg": {
+      "enabled": false,
+      "name": "RarBG",
+      "baseUrl": "https://rarbg.to",
+      "searchUrl": "https://rarbg.to/torrents.php",
+      "categories": [
+        "all",
+        "movie",
+        "tv"
+      ],
+      "searchParam": "search",
+      "hasMagnet": true
+    },
+    "nyaa": {
+      "enabled": false,
+      "name": "Nyaa",
+      "baseUrl": "https://nyaa.si",
+      "searchUrl": "https://nyaa.si/",
+      "categories": [
+        "all",
+        "anime",
+        "movie",
+        "tv"
+      ],
+      "searchParam": "q",
+      "hasMagnet": true
+    },
+    "rargb": {
+      "enabled": true,
+      "name": "RARGB",
+      "baseUrl": "https://rargb.to",
+      "searchUrl": "https://rargb.to/torrents.php",
+      "categories": [
+        "all",
+        "movie",
+        "tv",
+        "games",
+        "music",
+        "anime",
+        "apps",
+        "documentary",
+        "other",
+        "xxx"
+      ],
+      "searchParam": "search",
+      "hasMagnet": true
+    }
+  }
+}

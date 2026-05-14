@@ -3,7 +3,7 @@ import cors from 'cors';
 import { execSync, exec } from 'child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, statSync, unlinkSync, renameSync, rmSync } from 'fs';
 import { createReadStream } from 'fs';
-import { join, resolve, extname } from 'path';
+import { join, resolve, extname, dirname } from 'path';
 import { tmpdir } from 'os';
 import { get as httpGet } from 'http';
 import { get as httpsGet } from 'https';
@@ -13,7 +13,7 @@ import WebTorrent from 'webtorrent';
 const app = express();
 const PORT = process.env.PORT || 3555;
 const SETTINGS_FILE = process.env.ELECTRON_USERDATA ? join(process.env.ELECTRON_USERDATA, 'settings.json') : join(__dirname, 'settings.json');
-const TOR_DL_PROJECT = process.env.TOR_DL_PATH || join(__dirname, '..', 'tor-dl');
+const TOR_DL_PROJECT = process.env.TOR_DL_PATH || join(__dirname, 'tor-dl');
 const TOR_DL_DIR = process.env.ELECTRON_USERDATA
   ? (() => {
       const d = join(process.env.ELECTRON_USERDATA, 'tor-dl');
@@ -190,9 +190,38 @@ function esc(v: string): string {
   return v.replace(/"/g, '\\"');
 }
 
+function getNodePath(): string {
+  // When running inside Electron, process.execPath points to the Electron exe.
+  // Spawning Electron for a CLI script is extremely slow - use system Node.js instead.
+  if (process.versions?.electron) {
+    const electronDir = dirname(process.execPath);
+    const bundled = join(electronDir, 'node.exe');
+    if (existsSync(bundled)) return bundled;
+    return 'node';
+  }
+  return process.execPath;
+}
+
+function getTorCmd(args: string): { nodePath: string; torDlScript: string; cmd: string } {
+  const torDlScript = join(TOR_DL_PROJECT, 'dist', 'bin', 'tor-dl.js');
+  const nodePath = getNodePath();
+  const cmd = `"${nodePath}" "${torDlScript}" ${args}`;
+  return { nodePath, torDlScript, cmd };
+}
+
+function getTorEnv(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    ELECTRON_USERDATA: process.env.ELECTRON_USERDATA || '',
+    TOR_DL_PATH: TOR_DL_PROJECT,
+    TOR_DL_DATA_DIR: TOR_DL_DIR
+  };
+}
+
 function torExec(args: string): string {
-  const cmd = `node "${join(TOR_DL_PROJECT, 'dist', 'bin', 'tor-dl.js')}" ${args}`;
-  console.log('[torExec] script:', join(TOR_DL_PROJECT, 'dist', 'bin', 'tor-dl.js'));
+  const { nodePath, torDlScript, cmd } = getTorCmd(args);
+  console.log('[torExec] node:', nodePath);
+  console.log('[torExec] script:', torDlScript);
   console.log('[torExec] cwd:', TOR_DL_DIR);
   console.log('[torExec] cmd:', cmd);
   console.log('[torExec] USERS_FILE location:', join(TOR_DL_DIR, 'users.json'));
@@ -208,12 +237,7 @@ function torExec(args: string): string {
   try {
     const output = execSync(cmd, {
       cwd: TOR_DL_DIR,
-      env: {
-        ...process.env,
-        ELECTRON_USERDATA: process.env.ELECTRON_USERDATA || '',
-        TOR_DL_PATH: TOR_DL_PROJECT,
-        TOR_DL_DATA_DIR: TOR_DL_DIR
-      },
+      env: getTorEnv(),
       encoding: 'utf-8', timeout: 60000,
       maxBuffer: 10 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe']
     });
@@ -230,9 +254,37 @@ function torExec(args: string): string {
   }
 }
 
-app.get('/api/watchlist', (_req, res) => {
+function torExecAsync(args: string): Promise<string> {
+  return new Promise((resolve) => {
+    const { nodePath, torDlScript, cmd } = getTorCmd(args);
+    console.log('[torExecAsync] node:', nodePath);
+    console.log('[torExecAsync] script:', torDlScript);
+    console.log('[torExecAsync] cwd:', TOR_DL_DIR);
+    console.log('[torExecAsync] cmd:', cmd);
+
+    const proc = exec(cmd, {
+      cwd: TOR_DL_DIR,
+      env: getTorEnv(),
+      encoding: 'utf-8',
+      timeout: 60000,
+      maxBuffer: 10 * 1024 * 1024
+    }, (error, stdout, stderr) => {
+      if (error) {
+        console.log('[torExecAsync] error:', error.message);
+        if (stdout) { console.log('[torExecAsync] stdout:', stdout); resolve(stdout); return; }
+        if (stderr) { console.log('[torExecAsync] stderr:', stderr); resolve(stderr); return; }
+        resolve(error.message);
+        return;
+      }
+      console.log('[torExecAsync] output:', stdout);
+      resolve(stdout);
+    });
+  });
+}
+
+app.get('/api/watchlist', async (_req, res) => {
   try {
-    torExec('list');
+    await torExecAsync('list');
     if (existsSync(WATCHLIST_CACHE)) {
       return res.json(JSON.parse(readFileSync(WATCHLIST_CACHE, 'utf-8')));
     }
@@ -242,9 +294,9 @@ app.get('/api/watchlist', (_req, res) => {
   }
 });
 
-app.post('/api/watchlist/refresh', (_req, res) => {
+app.post('/api/watchlist/refresh', async (_req, res) => {
   try {
-    torExec('list');
+    await torExecAsync('list');
     if (existsSync(WATCHLIST_CACHE)) {
       return res.json(JSON.parse(readFileSync(WATCHLIST_CACHE, 'utf-8')));
     }
@@ -343,7 +395,7 @@ app.post('/api/watchlist/enrich', async (req, res) => {
   }
 });
 
-app.post('/api/search', (req, res) => {
+app.post('/api/search', async (req, res) => {
   const { query } = req.body;
   if (!query) return res.status(400).json({ error: 'Query required' });
   try {
@@ -360,7 +412,7 @@ app.post('/api/search', (req, res) => {
     if (filters.order) args += ` --order ${filters.order}`;
     if (filters.category && filters.category !== 'all') args += ` -c ${filters.category}`;
     if (filters.sources) args += ` -S "${filters.sources}"`;
-    torExec(args);
+    await torExecAsync(args);
     if (existsSync(CACHE_FILE)) {
       try {
         return res.json(JSON.parse(readFileSync(CACHE_FILE, 'utf-8')));
@@ -469,14 +521,15 @@ app.get('/api/user', (_req, res) => {
   }
 });
 
-app.post('/api/user', (req, res) => {
+app.post('/api/user', async (req, res) => {
   try {
     const { username } = req.body;
     const data = { letterboxd: { username } };
     writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
     try { if (existsSync(WATCHLIST_CACHE)) unlinkSync(WATCHLIST_CACHE); } catch (_) {}
-    try { torExec(`setuser "${username}"`); } catch (_) {}
-    try { torExec('list'); } catch (_) {}
+    // Fire off async but don't block the response
+    torExecAsync(`setuser "${username}"`).catch(() => {});
+    torExecAsync('list').catch(() => {});
     res.json({ ok: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -891,20 +944,12 @@ function cleanup(): void {
   try { server.close(); } catch (_) {}
 }
 
-// On startup, try to clean orphaned node.exe processes from tor-dl
+// On startup, try to clean orphaned tor-dl processes
 function cleanOrphanedProcesses(): void {
   try {
     const me = process.pid;
-    const cmd = `wmic process where "name='node.exe' and processId != ${me}" get processId,commandline /format:csv 2>nul`;
-    const out = execSync(cmd, { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
-    const lines = out.split('\n').filter(l => l.includes('tor-dl'));
-    for (const line of lines) {
-      const parts = line.trim().split(',');
-      const pid = parseInt(parts[parts.length - 1], 10);
-      if (pid && pid !== me) {
-        try { execSync(`taskkill /f /pid ${pid}`, { stdio: 'pipe', timeout: 3000 }); } catch (_) {}
-      }
-    }
+    const cmd = `powershell -NoProfile -Command "$proc = Get-CimInstance Win32_Process -Filter \\"name='node.exe' AND processId != ${me}\\" | Where-Object { $_.CommandLine -match 'tor-dl' }; if ($proc) { $proc | ForEach-Object { taskkill /f /pid $_.ProcessId } }"`;
+    execSync(cmd, { encoding: 'utf-8', timeout: 8000, stdio: ['pipe', 'pipe', 'pipe'] });
   } catch (_) {}
 }
 cleanOrphanedProcesses();
